@@ -1,0 +1,69 @@
+<section class="space-y-6">
+  <div class="sticky top-4 z-10 rounded-3xl border border-sky-200 bg-white/95 px-5 py-4 shadow-sm backdrop-blur">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Active Candidate</p>
+        <h2 class="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+          <%= attempt.candidateName %>
+          <span class="font-normal text-slate-500">(<%= attempt.institution %>)</span>
+        </h2>
+        <p class="mt-1 text-sm text-slate-500"><%= course.code %> - <%= course.name %></p>
+      </div>
+
+      <div class="rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-sm">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-300">Time Remaining</div>
+        <div class="mt-1 text-2xl font-semibold tabular-nums" data-seconds="<%= durationMinutes * 60 %>" data-attempt-id="<%= attempt.id %>">
+          <span id="timer-display"><%= String(durationMinutes).padStart(2, "0") %>:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form
+    id="quiz-form"
+    class="space-y-5"
+    hx-post="/attempts/<%= attempt.id %>/submit"
+    hx-target="#main"
+    hx-swap="innerHTML"
+    hx-indicator="#global-loader"
+  >
+    <div class="grid gap-4">
+      <% questions.forEach(function(question, index) { %>
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div class="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Question <%= index + 1 %></p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">[<%= question.questionId %>] <%= question.text %></h3>
+            </div>
+          </div>
+
+          <div class="grid gap-3">
+            <% [
+              { key: "optionA", value: question.optionA },
+              { key: "optionB", value: question.optionB },
+              { key: "optionC", value: question.optionC },
+              { key: "optionD", value: question.optionD }
+            ].sort(() => Math.random() - 0.5).forEach(function(option) { %>
+              <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-sky-300 hover:bg-sky-50">
+                <input
+                  type="radio"
+                  name="answers[<%= question.id %>]"
+                  value="<%= option.value %>"
+                  class="mt-1 h-4 w-4 border-slate-300 text-sky-600 focus:ring-sky-500"
+                />
+                <span class="text-sm leading-6 text-slate-700"><%= option.value %></span>
+              </label>
+            <% }) %>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+
+    <div class="flex items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p class="text-sm text-slate-500">Review your answers before submitting. Submission finalises the session.</p>
+      <button class="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200" type="submit">
+        Finalise Evaluation & Submit Answers
+      </button>
+    </div>
+  </form>
+</section>

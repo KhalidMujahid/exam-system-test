@@ -1,0 +1,15 @@
+<section class="mx-auto max-w-2xl space-y-5">
+  <div class="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700">
+    <div class="text-sm font-semibold">Registration Error</div>
+    <div class="mt-1 text-sm"><%= message %></div>
+  </div>
+  <button
+    class="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+    hx-get="/portal"
+    hx-target="#main"
+    hx-swap="innerHTML"
+    hx-indicator="#global-loader"
+  >
+    Back to registration
+  </button>
+</section>

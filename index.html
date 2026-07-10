@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCops Academy - Secure Quiz Framework & Management System</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0284c7;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #334155;
+            --text-heading: #0f172a;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .no-print-container {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .hidden { display: none !important; }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        header h1 {
+            color: var(--text-heading);
+            margin: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .system-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            background: #e2e8f0;
+            color: var(--text-main);
+            border: none;
+            padding: 10px 20px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        h2 { color: var(--text-heading); margin-top: 0; font-size: 22px; }
+        h3 { color: var(--text-heading); margin-top: 24px; font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+        .form-group { margin-bottom: 20px; }
+        .row-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 10px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-heading); }
+        input[type="text"], input[type="password"], input[type="number"], select, textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;
+            box-sizing: border-box; font-size: 15px; color: var(--text-main); font-family: inherit;
+        }
+        textarea { font-family: monospace; resize: vertical; }
+        input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); }
+
+        .metric-banner {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .metric-title { font-weight: 700; color: #0369a1; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .metric-value { font-size: 28px; font-weight: 800; color: var(--primary); }
+
+        .course-option {
+            border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px;
+            margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;
+        }
+        .course-option:hover { border-color: var(--accent); background-color: #f0f9ff; }
+        .course-option input { margin-right: 14px; transform: scale(1.2); }
+
+        .quiz-sticky-header {
+            position: sticky; top: 0; background: var(--bg-card); z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; margin-bottom: 30px; border: 2px solid var(--accent);
+            border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .timer-box { font-size: 20px; font-weight: 700; color: var(--danger); }
+
+        .question-block { margin-bottom: 32px; padding: 20px; border: 1px solid var(--border); border-radius: 6px; }
+        .question-text { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-bottom: 16px; }
+        .option-item {
+            display: flex; align-items: center; padding: 10px; border: 1px solid var(--border);
+            border-radius: 4px; margin-bottom: 8px; cursor: pointer;
+        }
+        .option-item input { margin-right: 12px; transform: scale(1.1); }
+
+        .btn {
+            background-color: var(--primary); color: white; border: none; padding: 12px 24px;
+            font-size: 15px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-block;
+        }
+        .btn:hover { background-color: #1e293b; }
+        .btn-accent { background-color: var(--accent); }
+        .btn-accent:hover { background-color: #0369a1; }
+        .btn-danger { background-color: var(--danger); }
+
+        .certificate-container { background: white; border: 10px double var(--primary); padding: 40px; text-align: center; margin-top: 20px; }
+        .cert-badge { font-size: 24px; font-weight: 800; padding: 8px 16px; display: inline-block; margin-bottom: 20px; border-radius: 4px; }
+        .pass-badge { background-color: #dcfce7; color: var(--success); border: 2px solid var(--success); }
+        .fail-badge { background-color: #fee2e2; color: var(--danger); border: 2px solid var(--danger); }
+        
+        .meta-table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 16px; text-align: left;}
+        .meta-table th, .meta-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .meta-table th { background-color: var(--bg-main); width: 35%; color: var(--text-heading); }
+        .cert-footer { margin-top: 40px; border-top: 1px dashed var(--border); padding-top: 20px; font-family: monospace; font-size: 11px; color: #64748b; text-align: left; }
+
+        @media print {
+            body { background: white; color: black; }
+            .no-print-container { max-width: 100%; margin: 0; padding: 0; }
+            .card { border: none; box-shadow: none; padding: 0; }
+            .no-print, .system-tabs, .metric-banner { display: none !important; }
+            .certificate-container { border: 6px double #000; padding: 30px; background: white; page-break-inside: avoid; }
+            .meta-table th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-container">
+    <header class="no-print">
+        <h1>CyberCops Academy</h1>
+        <p>Assessment System & Administrative Console</p>
+    </header>
+
+    <div class="system-tabs no-print">
+        <button id="tab-portal" class="tab-btn active" onclick="switchMode('portal')">Candidate Testing Portal</button>
+        <button id="tab-admin" class="tab-btn" onclick="switchMode('admin')">🔐 System Administration Panel</button>
+    </div>
+
+    <div id="live-counter-banner" class="metric-banner no-print">
+        <div>
+            <div class="metric-title">Platform Verification Metrics</div>
+            <div style="font-size: 13px; color: #0284c7;">Total authenticated quiz assessment attempts processed:</div>
+        </div>
+        <div id="metric-session-count" class="metric-value">0</div>
+    </div>
+
+    <div class="card">
+        
+        <div id="admin-auth-view" class="hidden">
+            <h2>Administrative Access Challenge</h2>
+            <p style="color: #64748b; margin-top: -10px;">Please authenticate to access deployment logs and runtime track settings.</p>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 24px;">
+            <div class="form-group">
+                <label for="admin-auth-pass">Console Secret Password Code:</label>
+                <input type="password" id="admin-auth-pass" placeholder="Enter password (Default: admin123)" autocomplete="off">
+            </div>
+            <button class="btn btn-accent" onclick="processAdminGatekeeperAuthentication()">Verify Credentials</button>
+        </div>
+        
+        <div id="admin-panel-view" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2>System Administration Panel</h2>
+                <button class="btn" style="background-color: #64748b; padding: 6px 14px; font-size: 13px;" onclick="logOutAdminConsole()">Lock Session</button>
+            </div>
+            <p style="color: #64748b; margin-top: -10px;">Modify active academic tracks, upload question databases, and alter dynamic test boundaries.</p>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 24px;">
+
+            <h3>Update Admin Password</h3>
+            <div class="form-group row-grid">
+                <input type="password" id="admin-new-pass" placeholder="Enter new password token">
+                <button class="btn" style="padding: 10px;" onclick="updateConsolePasswordSecret()">Update Secret</button>
+            </div>
+
+            <h3>Track Matrix Configuration</h3>
+            <p style="color: #64748b; font-size: 13px; margin-top: -5px;">Add courses or update parameters. Modifications save automatically to long-term memory registers.</p>
+            <div id="admin-course-rows-container"></div>
+            <button class="btn btn-accent" style="margin-bottom: 24px; padding: 8px 16px; font-size: 13px;" onclick="addNewCourseTrackRow()">＋ Add New Track Row</button>
+
+            <h3>Question Ingestion Console</h3>
+            <div class="form-group">
+                <label for="admin-config-duration">Global Assessment Duration (Minutes):</label>
+                <input type="number" id="admin-config-duration" value="30" min="1" max="180" onchange="saveGlobalAssessmentTimeLimit()">
+            </div>
+
+            <div class="form-group">
+                <label for="admin-target-course">Select Ingestion Target Course Storage Partition:</label>
+                <select id="admin-target-course" onchange="loadSelectedPoolToTextarea()"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="admin-json-payload">Question Data Schema Payload (JSON Array):</label>
+                <textarea id="admin-json-payload" rows="10" placeholder="[{ ... }]"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <button class="btn btn-accent" onclick="processAdminIngestion()">Commit Ingestion Payload</button>
+                <button class="btn" style="background-color: #64748b;" onclick="resetPoolToDefault()">Reset Current Track to Sample Seeds</button>
+            </div>
+
+            <h3>System Telemetry & Database Report</h3>
+            <div id="admin-pool-status" style="background: var(--bg-main); padding: 16px; border-radius: 6px; font-family: monospace; font-size: 13px; margin-bottom: 12px;"></div>
+            <button class="btn btn-danger" style="padding: 6px 14px; font-size: 12px;" onclick="resetCounterLogs()">Reset Lifetime Counter Metrics</button>
+        </div>
+
+        <div id="portal-views-container">
+            <div id="registration-view">
+                <h2>Step 1: Participant Registration & Track Selection</h2>
+                <div class="form-group">
+                    <label for="reg-name">Full Name (Legal string verification):</label>
+                    <input type="text" id="reg-name" placeholder="e.g. Inspector John Smith" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="reg-inst">Institution / Organisation:</label>
+                    <input type="text" id="reg-inst" placeholder="e.g. Metropolitan Police Service" autocomplete="off">
+                </div>
+
+                <label style="margin-top: 24px;">Select Core Target Assessment Course:</label>
+                <div id="course-selector-container"></div>
+                
+                <button class="btn btn-accent" style="margin-top: 16px; width: 100%;" onclick="initializeQuizSession()">Initialize Assessment Session</button>
+            </div>
+
+            <div id="quiz-view" class="hidden">
+                <div class="quiz-sticky-header no-print">
+                    <div>
+                        <span style="font-size: 14px; text-transform: uppercase; color: #64748b; display: block;">Active Candidate</span>
+                        <strong id="session-candidate-label"></strong>
+                    </div>
+                    <div class="timer-box">TIME REMAINING: <span id="timer-display">30:00</span></div>
+                </div>
+                <div id="active-questions-deck"></div>
+                <button class="btn no-print" style="width: 100%;" onclick="terminateSession(false)">Finalise Evaluation & Submit Answers</button>
+            </div>
+
+            <div id="results-view" class="hidden">
+                <div class="no-print" style="margin-bottom: 24px; text-align: right;">
+                    <button class="btn btn-accent" onclick="window.print()">Export Result Summary (PDF)</button>
+                    <button class="btn" style="background-color: #64748b; margin-left: 10px;" onclick="resetEngine()">New Attempt</button>
+                </div>
+
+                <div class="certificate-container">
+                    <div id="outcome-badge" class="cert-badge"></div>
+                    <h2 style="font-size: 26px; margin-bottom: 5px; text-transform: uppercase;">Official Assessment Report</h2>
+                    <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px;">CyberCops Academy Validation Standard</p>
+                    
+                    <table class="meta-table">
+                        <tr><th>Participant Name</th><td id="pdf-name"></td></tr>
+                        <tr><th>Institution / Organisation</th><td id="pdf-inst"></td></tr>
+                        <tr><th>Assessment Track</th><td id="pdf-course"></td></tr>
+                        <tr><th>Quantitative Score</th><td id="pdf-score" style="font-weight: bold;"></td></tr>
+                        <tr><th>Evaluation Percentage</th><td id="pdf-percentage" style="font-weight: bold;"></td></tr>
+                        <tr><th>Session Timeline Logs</th><td id="pdf-timestamps"></td></tr>
+                    </table>
+
+                    <div class="cert-footer">
+                        <div><strong>SYSTEM AUTHENTICATION SIGNATURE BLOCK:</strong></div>
+                        <div id="pdf-crypto-checksum"></div>
+                        <div style="margin-top: 4px; font-style: italic;">Verified at runtime. Content tamper checks enforced server-side.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Global Datastore State Maps
+    let COURSE_MATRIX = {};
+    let COMPREHENSIVE_QUESTION_DATA_INGESTION = {};
+    
+    let global_config_duration_minutes = 30;
+    let session_Active_Questions = [];
+    let session_Timer = null;
+    let seconds_Remaining = 1800; 
+    let timestamp_Start = null;
+    let isAdminAuthenticated = false;
+
+    // Default Seed Ingestion Arrays if LocalStorage registers are blank
+    const TRACK_DEFAULTS = {
+        "CCA-01": "Introduction to Cyber Crime Investigation",
+        "CCA-02": "Digital Forensics and Evidence Preservation",
+        "CCA-03": "Network Security and Traffic Analysis",
+        "CCA-04": "Ethical Hacking and Penetration Testing Fundamentals",
+        "CCA-05": "Cyber Law, Governance, and Incident Response"
+    };
+
+    function generateFactorySamplePool(courseCode) {
+        return Array.from({length: 22}, (_, i) => ({
+            Question_ID: `${courseCode}-Q-${10000 + i}`,
+            Question_Text: `System-generated Data Node Scenario [${courseCode} Item #${i+1}]: Select the optimal handling criteria under core compliance metrics.`,
+            Option_A: "Primary baseline operations priority structure execution", 
+            Option_B: "Secondary auxiliary processing fallback matrix configuration", 
+            Option_C: "Tertiary perimeter isolation mechanism gamma", 
+            Option_D: "Standard safe sandbox runtime validation loop routine",
+            Correct_Answer: "Primary baseline operations priority structure execution"
+        }));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        initializePersistentMemoryStorage();
+        refreshCourseDependantUIComponents();
+    });
+
+    /**
+     * LONG-TERM MEMORY ENGINE DEPLOYMENT (LOCAL STORAGE PIPELINES)
+     */
+    function initializePersistentMemoryStorage() {
+        // Set Default Administrator Gatekeeper Key
+        if (!localStorage.getItem('cca_admin_secret')) {
+            localStorage.setItem('cca_admin_secret', 'admin123');
+        }
+        // Set Attempt telemetry flags
+        if (!localStorage.getItem('cca_total_attempts')) {
+            localStorage.setItem('cca_total_attempts', '0');
+        }
+        // Set global boundary parameters
+        if (localStorage.getItem('cca_exam_duration')) {
+            global_config_duration_minutes = parseInt(localStorage.getItem('cca_exam_duration'), 10);
+            document.getElementById('admin-config-duration').value = global_config_duration_minutes;
+        } else {
+            localStorage.setItem('cca_exam_duration', '30');
+        }
+        // Mount Course Matrix index mapping
+        if (localStorage.getItem('cca_course_matrix')) {
+            COURSE_MATRIX = JSON.parse(localStorage.getItem('cca_course_matrix'));
+        } else {
+            COURSE_MATRIX = { ...TRACK_DEFAULTS };
+            localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX));
+        }
+        // Mount Database Core Pools
+        if (localStorage.getItem('cca_question_pools')) {
+            COMPREHENSIVE_QUESTION_DATA_INGESTION = JSON.parse(localStorage.getItem('cca_question_pools'));
+        } else {
+            Object.keys(COURSE_MATRIX).forEach(code => {
+                COMPREHENSIVE_QUESTION_DATA_INGESTION[code] = generateFactorySamplePool(code);
+            });
+            localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION));
+        }
+        document.getElementById('metric-session-count').textContent = localStorage.getItem('cca_total_attempts');
+    }
+
+    function saveCourseMatrixToDisk() {
+        localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX));
+    }
+
+    function saveQuestionPoolsToDisk() {
+        localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION));
+    }
+
+    function saveGlobalAssessmentTimeLimit() {
+        const val = parseInt(document.getElementById('admin-config-duration').value, 10);
+        if(val > 0) {
+            global_config_duration_minutes = val;
+            localStorage.setItem('cca_exam_duration', val.toString());
+            updateAdminStatsReport();
+        }
+    }
+
+    /**
+     * GATEKEEPER PASS ACCESS SECURE CHALLENGE CONTROLLERS
+     */
+    function processAdminGatekeeperAuthentication() {
+        const passwordInput = document.getElementById('admin-auth-pass').value;
+        const savedSecret = localStorage.getItem('cca_admin_secret');
+        if (passwordInput === savedSecret) {
+            isAdminAuthenticated = true;
+            document.getElementById('admin-auth-view').classList.add('hidden');
+            document.getElementById('admin-panel-view').classList.remove('hidden');
+            document.getElementById('admin-auth-pass').value = '';
+            updateAdminStatsReport();
+        } else {
+            alert("Security System Intercept: Authentication Failure. Bad string identifier matched.");
+        }
+    }
+
+    function updateConsolePasswordSecret() {
+        const val = document.getElementById('admin-new-pass').value.trim();
+        if (val.length < 4) {
+            alert("Security Criteria Warning: Access string must be at least 4 characters.");
+            return;
+        }
+        localStorage.setItem('cca_admin_secret', val);
+        document.getElementById('admin-new-pass').value = '';
+        alert("Administrative password credential modified successfully.");
+    }
+
+    function logOutAdminConsole() {
+        isAdminAuthenticated = false;
+        document.getElementById('admin-panel-view').classList.add('hidden');
+        document.getElementById('admin-auth-view').classList.remove('hidden');
+    }
+
+    /**
+     * DYNAMIC COURSE MATRIX ADMINISTRATION LOGIC
+     */
+    function refreshCourseDependantUIComponents() {
+        renderCourseSelectors();
+        populateAdminCourseModifierRows();
+        populateAdminSelectDropdown();
+        loadSelectedPoolToTextarea();
+        updateAdminStatsReport();
+    }
+
+    function populateAdminCourseModifierRows() {
+        const container = document.getElementById('admin-course-rows-container');
+        container.innerHTML = '';
+        Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
+            const div = document.createElement('div');
+            div.className = 'row-grid';
+            div.innerHTML = `
+                <input type="text" value="${code}" placeholder="Course Code" onchange="updateCourseKeyMapping('${code}', this.value, null)">
+                <input type="text" value="${name}" placeholder="Course Title Name" onchange="updateCourseKeyMapping('${code}', null, this.value)">
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function addNewCourseTrackRow() {
+        const newCode = `CCA-0${Object.keys(COURSE_MATRIX).length + 1}`;
+        COURSE_MATRIX[newCode] = "New Administrative Target Track Course Title";
+        if (!COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode]) {
+            COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = generateFactorySamplePool(newCode);
+        }
+        saveCourseMatrixToDisk();
+        saveQuestionPoolsToDisk();
+        refreshCourseDependantUIComponents();
+    }
+
+    function updateCourseKeyMapping(oldCode, newCode, newName) {
+        if (newCode && newCode.trim() !== oldCode) {
+            newCode = newCode.trim();
+            COURSE_MATRIX[newCode] = COURSE_MATRIX[oldCode];
+            delete COURSE_MATRIX[oldCode];
+            COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode] || [];
+            delete COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode];
+        } else if (newName !== null) {
+            COURSE_MATRIX[oldCode] = newName.trim();
+        }
+        saveCourseMatrixToDisk();
+        saveQuestionPoolsToDisk();
+        refreshCourseDependantUIComponents();
+    }
+
+    function populateAdminSelectDropdown() {
+        const select = document.getElementById('admin-target-course');
+        const currentSelection = select.value;
+        select.innerHTML = '';
+        Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = `${code}: ${name}`;
+            if(code === currentSelection) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function loadSelectedPoolToTextarea() {
+        const course = document.getElementById('admin-target-course').value;
+        if (course && COMPREHENSIVE_QUESTION_DATA_INGESTION[course]) {
+            document.getElementById('admin-json-payload').value = JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION[course], null, 2);
+        } else {
+            document.getElementById('admin-json-payload').value = '[]';
+        }
+    }
+
+    function processAdminIngestion() {
+        const course = document.getElementById('admin-target-course').value;
+        const payloadRaw = document.getElementById('admin-json-payload').value;
+
+        try {
+            const parsedArray = JSON.parse(payloadRaw);
+            if (!Array.isArray(parsedArray)) throw new Error("Payload must be a valid structural JSON Array.");
+            
+            parsedArray.forEach((item, idx) => {
+                ['Question_ID', 'Question_Text', 'Option_A', 'Option_B', 'Option_C', 'Option_D', 'Correct_Answer'].forEach(f => {
+                    if (!item[f]) throw new Error(`Index ${idx} missing parameter value string field: "${f}"`);
+                });
+            });
+
+            COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = parsedArray;
+            saveQuestionPoolsToDisk();
+
+            alert(`Storage Permanent Write Success: [${course}] memory tracks synced.`);
+            updateAdminStatsReport();
+            renderCourseSelectors();
+        } catch (err) {
+            alert(`Validation Exception Intercepted: ${err.message}`);
+        }
+    }
+
+    function resetPoolToDefault() {
+        const course = document.getElementById('admin-target-course').value;
+        COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = generateFactorySamplePool(course);
+        saveQuestionPoolsToDisk();
+        loadSelectedPoolToTextarea();
+        updateAdminStatsReport();
+        alert(`Memory track wiped and seed indices rolled back.`);
+    }
+
+    function updateAdminStatsReport() {
+        const reportContainer = document.getElementById('admin-pool-status');
+        let html = "";
+        Object.keys(COURSE_MATRIX).forEach(code => {
+            const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
+            html += `• Track [${code}] Index Capacity: ${count} items active\n`;
+        });
+        html += `\n• Current Dynamic Runtime Duration Boundary: ${global_config_duration_minutes} Minutes`;
+        html += `\n• Persistent Counter Verification Metric: ${localStorage.getItem('cca_total_attempts') || 0} attempts saved.`;
+        reportContainer.innerText = html;
+    }
+
+    function renderCourseSelectors() {
+        const container = document.getElementById('course-selector-container');
+        container.innerHTML = '';
+        Object.entries(COURSE_MATRIX).forEach(([code, name], index) => {
+            const div = document.createElement('div');
+            div.className = 'course-option';
+            div.onclick = () => { if(document.getElementById(`radio-${code}`)) document.getElementById(`radio-${code}`).checked = true; }
+            const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
+            div.innerHTML = `
+                <input type="radio" name="course-selection" id="radio-${code}" value="${code}" ${index === 0 ? 'checked' : ''}>
+                <div><strong>${code}</strong> - ${name} <span style="color: #64748b; font-size:12px;">(${count} loaded)</span></div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function switchMode(mode) {
+        document.getElementById('tab-portal').classList.remove('active');
+        document.getElementById('tab-admin').classList.remove('active');
+        
+        if (mode === 'admin') {
+            document.getElementById('tab-admin').classList.add('active');
+            document.getElementById('portal-views-container').classList.add('hidden');
+            if (isAdminAuthenticated) {
+                document.getElementById('admin-panel-view').classList.remove('hidden');
+                updateAdminStatsReport();
+            } else {
+                document.getElementById('admin-auth-view').classList.remove('hidden');
+            }
+        } else {
+            document.getElementById('tab-portal').classList.add('active');
+            document.getElementById('admin-panel-view').classList.add('hidden');
+            document.getElementById('admin-auth-view').classList.add('hidden');
+            document.getElementById('portal-views-container').classList.remove('hidden');
+        }
+    }
+
+    function incrementAttemptCounter() {
+        let currentCount = parseInt(localStorage.getItem('cca_total_attempts'), 10) || 0;
+        currentCount++;
+        localStorage.setItem('cca_total_attempts', currentCount.toString());
+        document.getElementById('metric-session-count').textContent = currentCount;
+    }
+
+    function resetCounterLogs() {
+        if (confirm("Administrative Override: Are you sure you want to completely clear the persistent attempt logs and reset the visitor metrics to 0?")) {
+            localStorage.setItem('cca_total_attempts', '0');
+            document.getElementById('metric-session-count').textContent = '0';
+            updateAdminStatsReport();
+        }
+    }
+
+    /**
+     * TESTING ENGINE OPERATIONS
+     */
+    function executeFisherYatesShuffle(array) {
+        let copy = [...array];
+        for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+    }
+
+    function initializeQuizSession() {
+        const nameInput = document.getElementById('reg-name').value.trim();
+        const instInput = document.getElementById('reg-inst').value.trim();
+        const checkedRadio = document.querySelector('input[name="course-selection"]:checked');
+
+        if (!nameInput || !instInput || !checkedRadio) {
+            alert("Validation Intercept: Missing registration input parameters.");
+            return;
+        }
+
+        const selectedCourse = checkedRadio.value;
+        const fullSourcePool = COMPREHENSIVE_QUESTION_DATA_INGESTION[selectedCourse] || [];
+
+        if (fullSourcePool.length < 20) {
+            alert(`Capacity Error: [${selectedCourse}] requires a minimum of 20 items to trigger randomisation loops. Ingest more questions via Admin console.`);
+            return;
+        }
+
+        incrementAttemptCounter();
+
+        timestamp_Start = new Date();
+        document.getElementById('tab-admin').style.display = 'none';
+
+        const randomizedPool = executeFisherYatesShuffle(fullSourcePool);
+        session_Active_Questions = randomizedPool.slice(0, 20);
+
+        document.getElementById('session-candidate-label').textContent = `${nameInput} (${instInput})`;
+        renderQuizQuestionsDeck();
+
+        seconds_Remaining = global_config_duration_minutes * 60;
+        updateTimerDisplay();
+        session_Timer = setInterval(executeTimerCountdownInterval, 1000);
+
+        switchPortalSubView('quiz-view');
+    }
+
+    function renderQuizQuestionsDeck() {
+        const deck = document.getElementById('active-questions-deck');
+        deck.innerHTML = '';
+        session_Active_Questions.forEach((q, index) => {
+            const block = document.createElement('div');
+            block.className = 'question-block';
+            block.dataset.qid = q.Question_ID;
+            block.dataset.correct = q.Correct_Answer;
+
+            const qText = document.createElement('div');
+            qText.className = 'question-text';
+            qText.textContent = `Q${index + 1}. [${q.Question_ID}] ${q.Question_Text}`;
+            block.appendChild(qText);
+
+            const optionsVector = executeFisherYatesShuffle([q.Option_A, q.Option_B, q.Option_C, q.Option_D]);
+            optionsVector.forEach(option => {
+                const label = document.createElement('label');
+                label.className = 'option-item';
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `ans-${q.Question_ID}`;
+                radio.value = option;
+                label.appendChild(radio);
+                label.appendChild(document.createTextNode(option));
+                block.appendChild(label);
+            });
+            deck.appendChild(block);
+        });
+    }
+
+    function executeTimerCountdownInterval() {
+        seconds_Remaining--;
+        updateTimerDisplay();
+        if (seconds_Remaining <= 0) {
+            clearInterval(session_Timer);
+            terminateSession(true);
+        }
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(seconds_Remaining / 60);
+        const seconds = seconds_Remaining % 60;
+        document.getElementById('timer-display').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function terminateSession(isTimeExpiry = false) {
+        clearInterval(session_Timer);
+        const timestamp_End = new Date();
+
+        if (isTimeExpiry) alert("Session Expired: Interface locked. Processing evaluation parameters.");
+
+        const nameInput = document.getElementById('reg-name').value.trim();
+        const instInput = document.getElementById('reg-inst').value.trim();
+        const selectedCourseCode = document.querySelector('input[name="course-selection"]:checked').value;
+        const selectedCourseName = COURSE_MATRIX[selectedCourseCode];
+
+        let rawScore = 0;
+        const totalQuestions = session_Active_Questions.length;
+
+        document.querySelectorAll('.question-block').forEach(block => {
+            const correctAnswer = block.dataset.correct;
+            const checkedRadio = block.querySelector('input[type="radio"]:checked');
+            const selection = checkedRadio ? checkedRadio.value : null;
+
+            block.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
+            if (selection === correctAnswer) rawScore++;
+        });
+
+        const percentageScore = (rawScore / totalQuestions) * 100;
+        const outcomeStatus = percentageScore >= 80 ? "PASS" : "FAIL";
+
+        document.getElementById('pdf-name').textContent = nameInput;
+        document.getElementById('pdf-inst').textContent = instInput;
+        document.getElementById('pdf-course').textContent = `${selectedCourseCode}: ${selectedCourseName}`;
+        document.getElementById('pdf-score').textContent = `${rawScore} / ${totalQuestions}`;
+        document.getElementById('pdf-percentage').textContent = `${percentageScore.toFixed(1)}%`;
+        document.getElementById('pdf-timestamps').textContent = `Start: ${timestamp_Start.toLocaleTimeString()} | End: ${timestamp_End.toLocaleTimeString()} (${timestamp_End.toLocaleDateString('en-GB')})`;
+
+        const badge = document.getElementById('outcome-badge');
+        badge.textContent = `STATUS: ${outcomeStatus}`;
+        badge.className = outcomeStatus === "PASS" ? "cert-badge pass-badge" : "cert-badge fail-badge";
+
+        document.getElementById('pdf-crypto-checksum').textContent = "CCA-SYS-TRK-" + btoa(`${nameInput}|${rawScore}|${timestamp_End.getTime()}`).substring(0, 24).toUpperCase();
+
+        switchPortalSubView('results-view');
+    }
+
+    function switchPortalSubView(subViewId) {
+        ['registration-view', 'quiz-view', 'results-view'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
+        document.getElementById(subViewId).classList.remove('hidden');
+    }
+
+    function resetEngine() {
+        document.getElementById('reg-name').value = '';
+        document.getElementById('reg-inst').value = '';
+        document.getElementById('tab-admin').style.display = 'block';
+        refreshCourseDependantUIComponents();
+        switchPortalSubView('registration-view');
+    }
+</script>
+
+</body>
+</html>

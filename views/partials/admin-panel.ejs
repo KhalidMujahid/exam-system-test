@@ -1,0 +1,192 @@
+<section class="space-y-8">
+  <div class="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Administration Console</p>
+      <h2 class="text-2xl font-semibold tracking-tight text-slate-900">System Administration Panel</h2>
+      <p class="max-w-3xl text-sm text-slate-600">
+        Update credentials, manage tracks, edit question pools, and keep the runtime boundary under control.
+      </p>
+    </div>
+
+    <form hx-post="/admin/logout" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+      <button class="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" type="submit">
+        Lock Session
+      </button>
+    </form>
+  </div>
+
+  <%- include("admin-stats", { attemptCounter, examDurationMinutes }) %>
+
+  <div class="grid gap-6 xl:grid-cols-2">
+    <section class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+      <h3 class="text-lg font-semibold text-slate-900">Update Admin Password</h3>
+      <form class="mt-4" hx-post="/admin/password" hx-target="#admin-message" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="password"
+            name="password"
+            placeholder="Enter new password token"
+            class="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+          />
+          <button class="rounded-full bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700" type="submit">
+            Update Secret
+          </button>
+        </div>
+      </form>
+      <div id="admin-message" class="mt-4"></div>
+    </section>
+
+    <section class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+      <h3 class="text-lg font-semibold text-slate-900">Global Assessment Duration</h3>
+      <form class="mt-4" hx-post="/admin/duration" hx-target="#admin-stats" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="number"
+            name="minutes"
+            min="1"
+            max="180"
+            value="<%= examDurationMinutes %>"
+            class="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+          />
+          <button class="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">
+            Save
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div class="space-y-2">
+        <h3 class="text-lg font-semibold text-slate-900">Course Matrix Configuration</h3>
+        <p class="text-sm text-slate-600">Rename tracks, add new ones, or reload question pools for a selected course.</p>
+      </div>
+      <form class="flex items-center gap-3" hx-post="/admin/attempts/reset" hx-target="#admin-stats" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <button class="rounded-full border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100" type="submit">
+          Reset Lifetime Counter Metrics
+        </button>
+      </form>
+    </div>
+
+    <div class="mt-5 space-y-3">
+      <% courses.forEach(function(course) { %>
+        <form class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_2fr_auto]" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+          <input type="hidden" name="originalCode" value="<%= course.code %>" />
+          <input
+            type="text"
+            name="code"
+            value="<%= course.code %>"
+            class="min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+          />
+          <input
+            type="text"
+            name="name"
+            value="<%= course.name %>"
+            class="min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+          />
+          <button class="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">
+            Save
+          </button>
+        </form>
+      <% }) %>
+    </div>
+
+    <form class="mt-4 grid gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 lg:grid-cols-[1fr_2fr_auto]" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+      <input
+        type="text"
+        name="code"
+        placeholder="New course code"
+        class="min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+      />
+      <input
+        type="text"
+        name="name"
+        placeholder="New course title"
+        class="min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+      />
+      <button class="rounded-full bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700" type="submit">
+        Add Course
+      </button>
+    </form>
+  </section>
+
+  <section class="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900">Question Ingestion Console</h3>
+          <p class="text-sm text-slate-600">Edit or replace the question pool for a selected track.</p>
+        </div>
+        <form hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+          <label class="sr-only" for="courseId">Select course</label>
+          <select
+            id="courseId"
+            name="courseId"
+            class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            onchange="this.form.requestSubmit()"
+          >
+            <% courses.forEach(function(course) { %>
+              <option value="<%= course.id %>" <%= selectedCourse && selectedCourse.id === course.id ? "selected" : "" %>><%= course.code %> - <%= course.name %></option>
+            <% }) %>
+          </select>
+        </form>
+      </div>
+
+      <form class="mt-4 space-y-4" hx-post="/admin/questions" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <input type="hidden" name="courseId" value="<%= selectedCourse ? selectedCourse.id : "" %>" />
+        <textarea
+          name="payload"
+          rows="16"
+          class="w-full rounded-3xl border border-slate-300 bg-slate-950 px-4 py-4 font-mono text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+        ><%= selectedCourse ? JSON.stringify(selectedCourse.questions.map(q => ({
+          Question_ID: q.questionId,
+          Question_Text: q.text,
+          Option_A: q.optionA,
+          Option_B: q.optionB,
+          Option_C: q.optionC,
+          Option_D: q.optionD,
+          Correct_Answer: q.correctAnswer
+        })), null, 2) : "[]" %></textarea>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-slate-500">Accepted fields: Question_ID, Question_Text, Option_A, Option_B, Option_C, Option_D, Correct_Answer.</p>
+          <div class="flex flex-wrap gap-3">
+            <button class="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" type="submit">
+              Commit Ingestion Payload
+            </button>
+            <button
+              class="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              type="button"
+              hx-post="/admin/questions/reset"
+              hx-include="[name='courseId']"
+              hx-target="#main"
+              hx-swap="innerHTML"
+              hx-indicator="#global-loader"
+            >
+              Reset to Sample Seeds
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <aside class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+      <h3 class="text-lg font-semibold text-slate-900">System Telemetry</h3>
+      <p class="mt-2 text-sm text-slate-600">Current course capacities and runtime settings.</p>
+      <div class="mt-4 space-y-3">
+        <% courses.forEach(function(course) { %>
+          <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold text-slate-900"><%= course.code %></div>
+                <div class="text-xs text-slate-500"><%= course.name %></div>
+              </div>
+              <div class="text-sm font-semibold text-slate-900"><%= course._count.questions %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </aside>
+  </section>
+</section>
