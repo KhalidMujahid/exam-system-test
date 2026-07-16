@@ -227,6 +227,35 @@ app.post("/verify", async (req, res, next) => {
   }
 });
 
+app.get("/admin/dashboard", async (req, res, next) => {
+  try {
+    const state = await getAppState();
+    if (!isAdminAuthenticated(req)) {
+      return res.redirect("/admin/login");
+    }
+    const selectedCourseId = req.query.courseId || (state.courses[0] && state.courses[0].id) || "";
+    const selectedCourse = selectedCourseId
+      ? await prisma.course.findUnique({
+          where: { id: selectedCourseId },
+          include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
+        })
+      : null;
+
+    res.render("index", {
+      courses: state.courses,
+      attemptCounter: state.attemptCounter,
+      examDurationMinutes: state.examDurationMinutes,
+      adminContent: "panel",
+      adminCourses: state.courses,
+      adminAttemptCounter: state.attemptCounter,
+      adminExamDurationMinutes: state.examDurationMinutes,
+      adminSelectedCourse: selectedCourse
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get("/admin/login", async (req, res, next) => {
   try {
     const isHtmx = req.headers["hx-request"] === "true";
@@ -311,26 +340,21 @@ app.post("/admin/login", async (req, res, next) => {
     }
 
     res.cookie(ADMIN_COOKIE, "1", { httpOnly: true, sameSite: "lax" });
-    const state = await getAppState();
-    const selectedCourse = state.courses[0]
-      ? await prisma.course.findUnique({
-          where: { id: state.courses[0].id },
-          include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
-        })
-      : null;
 
     if (isHtmx) {
+      const state = await getAppState();
+      const selectedCourse = state.courses[0]
+        ? await prisma.course.findUnique({
+            where: { id: state.courses[0].id },
+            include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
+          })
+        : null;
       return res.render("partials/admin-panel", {
         courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes, selectedCourse
       });
     }
 
-    res.render("index", {
-      courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
-      adminContent: "panel",
-      adminCourses: state.courses, adminAttemptCounter: state.attemptCounter,
-      adminExamDurationMinutes: state.examDurationMinutes, adminSelectedCourse: selectedCourse
-    });
+    res.redirect("/admin/dashboard");
   } catch (err) {
     next(err);
   }
@@ -638,12 +662,17 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
       return res.render("partials/admin-alert", { message: "Course not found." });
     }
 
+    const imageMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    const isImage = imageMimeTypes.includes(req.file.mimetype);
+    const resourceType = isImage ? "image" : "raw";
+
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "auto",
+          resource_type: resourceType,
           folder: "cca_materials",
-          public_id: `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+          public_id: `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`,
+          access_mode: "public"
         },
         (error, result) => {
           if (error) reject(error);
@@ -659,6 +688,7 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
         title: req.body.title || req.file.originalname,
         filename: req.file.originalname,
         cloudinaryId: result.public_id,
+        cloudinaryType: resourceType,
         url: result.secure_url,
         filesize: req.file.size,
         mimeType: req.file.mimetype
@@ -667,7 +697,7 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
 
     const updatedCourse = await prisma.course.findUnique({
       where: { id: courseId },
-      include: { materials: { orderBy: { createdAt: "desc" } } }
+      include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
     });
     const state = await getAppState();
     res.render("partials/admin-panel", {
@@ -681,6 +711,22 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
   }
 });
 
+app.get("/materials/download/:id", async (req, res, next) => {
+  try {
+    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
+    if (!material) return res.status(404).send("Material not found.");
+    const type = material.cloudinaryType || "raw";
+    try {
+      const result = await cloudinary.api.resource(material.cloudinaryId, { resource_type: type });
+      res.redirect(result.secure_url);
+    } catch {
+      res.redirect(material.url);
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => {
   try {
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
@@ -688,13 +734,13 @@ app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => 
     const courseId = material.courseId;
 
     try {
-      await cloudinary.uploader.destroy(material.cloudinaryId, { resource_type: "raw" });
+      await cloudinary.uploader.destroy(material.cloudinaryId, { resource_type: material.cloudinaryType || "raw" });
     } catch (_) {}
 
     await prisma.courseMaterial.delete({ where: { id: material.id } });
     const updatedCourse = await prisma.course.findUnique({
       where: { id: courseId },
-      include: { materials: { orderBy: { createdAt: "desc" } } }
+      include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
     });
     const state = await getAppState();
     res.render("partials/admin-panel", {

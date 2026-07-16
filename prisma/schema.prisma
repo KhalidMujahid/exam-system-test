@@ -89,10 +89,11 @@ model CourseMaterial {
   course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title        String
   filename     String
-  cloudinaryId String
-  url          String
-  filesize     Int
-  mimeType     String
+  cloudinaryId   String
+  cloudinaryType String @default("raw")
+  url            String
+  filesize       Int
+  mimeType       String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
