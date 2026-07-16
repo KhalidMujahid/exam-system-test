@@ -716,12 +716,14 @@ app.get("/materials/download/:id", async (req, res, next) => {
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
     if (!material) return res.status(404).send("Material not found.");
     const type = material.cloudinaryType || "raw";
-    try {
-      const result = await cloudinary.api.resource(material.cloudinaryId, { resource_type: type });
-      res.redirect(result.secure_url);
-    } catch {
-      res.redirect(material.url);
-    }
+    const downloadUrl = cloudinary.url(material.cloudinaryId, {
+      resource_type: type,
+      secure: true,
+      type: "upload",
+      flags: "attachment",
+      attachment_name: material.filename
+    });
+    res.redirect(downloadUrl);
   } catch (err) {
     next(err);
   }
