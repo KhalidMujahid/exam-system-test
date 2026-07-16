@@ -2,6 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const { PrismaClient } = require("@prisma/client");
 
 const app = express();
@@ -10,6 +13,17 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_COOKIE = "cca_admin_auth";
 const DEFAULT_ADMIN_PASSWORD = "admin123";
 const PASS_THRESHOLD = 80;
+const UPLOADS_DIR = __dirname + "/uploads/materials";
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`)
+});
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
@@ -19,6 +33,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(__dirname + "/public"));
 
+app.get("/favicon.ico", (req, res) => {
+  res.sendFile(__dirname + "/public/logo.jpeg");
+});
+app.get("/logo.jpeg", (req, res) => {
+  res.sendFile(__dirname + "/public/logo.jpeg");
+});
 app.get("/htmx.min.js", (req, res) => {
   res.sendFile(require.resolve("htmx.org/dist/htmx.min.js"));
 });
@@ -157,7 +177,7 @@ app.get("/admin", async (req, res, next) => {
     const selectedCourse = selectedCourseId
       ? await prisma.course.findUnique({
           where: { id: selectedCourseId },
-          include: { questions: { orderBy: { createdAt: "asc" } } }
+          include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
         })
       : null;
 
@@ -187,7 +207,7 @@ app.post("/admin/login", async (req, res, next) => {
     const selectedCourse = state.courses[0]
       ? await prisma.course.findUnique({
           where: { id: state.courses[0].id },
-          include: { questions: { orderBy: { createdAt: "asc" } } }
+          include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
         })
       : null;
 
@@ -294,7 +314,7 @@ app.post("/admin/courses", requireAdmin, async (req, res, next) => {
     const state = await getAppState();
     const selectedCourse = await prisma.course.findUnique({
       where: { code },
-      include: { questions: { orderBy: { createdAt: "asc" } } }
+      include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
     });
 
     res.render("partials/admin-panel", {
@@ -363,7 +383,7 @@ app.post("/admin/questions", requireAdmin, async (req, res, next) => {
 
     const updatedCourse = await prisma.course.findUnique({
       where: { id: course.id },
-      include: { questions: { orderBy: { createdAt: "asc" } } }
+      include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
     });
     const state = await getAppState();
 
@@ -404,7 +424,7 @@ app.post("/admin/questions/reset", requireAdmin, async (req, res, next) => {
 
     const updatedCourse = await prisma.course.findUnique({
       where: { id: course.id },
-      include: { questions: { orderBy: { createdAt: "asc" } } }
+      include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } }
     });
     const state = await getAppState();
 
@@ -472,6 +492,88 @@ app.post("/quiz", async (req, res, next) => {
       course,
       questions: selectedQuestions,
       durationMinutes
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/materials/:courseId", async (req, res, next) => {
+  try {
+    const materials = await prisma.courseMaterial.findMany({
+      where: { courseId: req.params.courseId },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(materials);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (req, res, next) => {
+  try {
+    const courseId = (req.body.courseId || "").trim();
+    if (!courseId || !req.file) {
+      return res.render("partials/admin-alert", { message: "Course and file are required." });
+    }
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) {
+      return res.render("partials/admin-alert", { message: "Course not found." });
+    }
+    await prisma.courseMaterial.create({
+      data: {
+        courseId,
+        title: req.body.title || req.file.originalname,
+        filename: req.file.filename,
+        filepath: req.file.path,
+        filesize: req.file.size,
+        mimeType: req.file.mimetype
+      }
+    });
+    const updatedCourse = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: { materials: { orderBy: { createdAt: "desc" } } }
+    });
+    const state = await getAppState();
+    res.render("partials/admin-panel", {
+      courses: state.courses,
+      attemptCounter: state.attemptCounter,
+      examDurationMinutes: state.examDurationMinutes,
+      selectedCourse: updatedCourse
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/materials/download/:id", async (req, res, next) => {
+  try {
+    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
+    if (!material) return res.status(404).send("Material not found.");
+    if (!fs.existsSync(material.filepath)) return res.status(404).send("File not found on disk.");
+    res.download(material.filepath, material.filename);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
+    if (!material) return res.render("partials/admin-alert", { message: "Material not found." });
+    const courseId = material.courseId;
+    if (fs.existsSync(material.filepath)) fs.unlinkSync(material.filepath);
+    await prisma.courseMaterial.delete({ where: { id: material.id } });
+    const updatedCourse = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: { materials: { orderBy: { createdAt: "desc" } } }
+    });
+    const state = await getAppState();
+    res.render("partials/admin-panel", {
+      courses: state.courses,
+      attemptCounter: state.attemptCounter,
+      examDurationMinutes: state.examDurationMinutes,
+      selectedCourse: updatedCourse
     });
   } catch (err) {
     next(err);
@@ -568,7 +670,7 @@ app.use((err, req, res, next) => {
 
 async function main() {
   await prisma.$connect();
-  await ensureSeedData();
+  // await ensureSeedData();
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });

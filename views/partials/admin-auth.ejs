@@ -1,27 +1,28 @@
-<section class="mx-auto max-w-xl space-y-6">
-  <div class="space-y-2">
-    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Administration Access</p>
-    <h2 class="text-2xl font-semibold tracking-tight text-slate-900">Administrative Access Challenge</h2>
-    <p class="text-sm text-slate-600">Authenticate to edit tracks, manage settings, and review runtime telemetry.</p>
+<section class="mx-auto max-w-lg space-y-6 animate-fade-in">
+  <div class="text-center">
+    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-900 shadow-lg ring-1 ring-white/10">
+      <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    </div>
+    <p class="text-xs font-bold uppercase tracking-widest text-brand-600 mb-1">Administration Access</p>
+    <h2 class="text-2xl font-bold tracking-tight text-surface-900">Administrative Access</h2>
+    <p class="mt-1 text-sm text-surface-500 max-w-sm mx-auto">Authenticate to edit tracks, manage settings, and review runtime telemetry.</p>
   </div>
 
   <% if (error) { %>
-    <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"><%= error %></div>
+    <div class="premium-alert premium-alert-error">
+      <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span><%= error %></span>
+    </div>
   <% } %>
 
-  <form class="space-y-4" hx-post="/admin/login" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+  <form class="space-y-4 premium-card" hx-post="/admin/login" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
     <div class="space-y-2">
-      <label for="admin-auth-pass" class="text-sm font-semibold text-slate-800">Console Secret Password Code</label>
-      <input
-        type="password"
-        id="admin-auth-pass"
-        name="password"
-        placeholder="Enter password (Default: admin123)"
-        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-      />
+      <label for="admin-auth-pass" class="premium-label">Console Password</label>
+      <input type="password" id="admin-auth-pass" name="password" placeholder="Enter admin password" class="premium-input" autocomplete="off" />
+      <p class="text-xs text-surface-400 mt-1">Default: admin123</p>
     </div>
-
-    <button class="rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-100" type="submit">
+    <button class="premium-btn premium-btn-primary w-full" type="submit">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
       Verify Credentials
     </button>
   </form>

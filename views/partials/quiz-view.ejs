@@ -1,19 +1,31 @@
 <section class="space-y-6">
-  <div class="sticky top-4 z-10 rounded-3xl border border-sky-200 bg-white/95 px-5 py-4 shadow-sm backdrop-blur">
+  <div class="sticky top-4 z-10 rounded-2xl border border-brand-200 bg-white/95 px-6 py-4 shadow-lg backdrop-blur-md" data-timer-root>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Active Candidate</p>
-        <h2 class="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+      <div class="min-w-0">
+        <p class="text-xs font-bold uppercase tracking-widest text-surface-500">Active Candidate</p>
+        <h2 class="mt-1 text-lg font-bold tracking-tight text-surface-900 truncate">
           <%= attempt.candidateName %>
-          <span class="font-normal text-slate-500">(<%= attempt.institution %>)</span>
+          <span class="font-normal text-surface-500">(<%= attempt.institution %>)</span>
         </h2>
-        <p class="mt-1 text-sm text-slate-500"><%= course.code %> - <%= course.name %></p>
+        <p class="mt-0.5 text-sm text-surface-500 truncate"><%= course.code %> — <%= course.name %></p>
       </div>
 
-      <div class="rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-sm">
-        <div class="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-300">Time Remaining</div>
-        <div class="mt-1 text-2xl font-semibold tabular-nums" data-seconds="<%= durationMinutes * 60 %>" data-attempt-id="<%= attempt.id %>">
-          <span id="timer-display"><%= String(durationMinutes).padStart(2, "0") %>:00</span>
+      <div class="flex items-center gap-5 flex-shrink-0">
+        <div class="hidden sm:block w-44">
+          <div class="flex items-center justify-between text-xs text-surface-500 mb-1.5">
+            <span class="font-semibold">Progress</span>
+            <span class="font-semibold" id="quiz-progress-text">0 of <%= questions.length %></span>
+          </div>
+          <div class="premium-progress">
+            <div id="quiz-progress-bar" class="premium-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div id="timer-container" class="premium-timer" data-timer-root>
+          <div class="premium-timer-label">Time Remaining</div>
+          <div class="premium-timer-value" data-seconds="<%= durationMinutes * 60 %>" data-attempt-id="<%= attempt.id %>">
+            <span id="timer-display"><%= String(durationMinutes).padStart(2, "0") %>:00</span>
+          </div>
         </div>
       </div>
     </div>
@@ -26,32 +38,31 @@
     hx-target="#main"
     hx-swap="innerHTML"
     hx-indicator="#global-loader"
+    data-question-count="<%= questions.length %>"
   >
     <div class="grid gap-4">
       <% questions.forEach(function(question, index) { %>
-        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <article class="premium-card premium-card-hover">
           <div class="mb-4 flex items-start justify-between gap-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Question <%= index + 1 %></p>
-              <h3 class="mt-1 text-lg font-semibold text-slate-900">[<%= question.questionId %>] <%= question.text %></h3>
+              <div class="flex items-center gap-3 mb-1">
+                <span class="inline-flex items-center justify-center h-7 w-7 rounded-lg bg-brand-100 text-brand-700 text-xs font-bold">Q<%= index + 1 %></span>
+                <span class="text-xs font-mono text-surface-400"><%= question.questionId %></span>
+              </div>
+              <h3 class="text-base font-semibold text-surface-900 leading-relaxed"><%= question.text %></h3>
             </div>
           </div>
 
-          <div class="grid gap-3">
+          <div class="grid gap-2.5">
             <% [
               { key: "optionA", value: question.optionA },
               { key: "optionB", value: question.optionB },
               { key: "optionC", value: question.optionC },
               { key: "optionD", value: question.optionD }
             ].sort(() => Math.random() - 0.5).forEach(function(option) { %>
-              <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-sky-300 hover:bg-sky-50">
-                <input
-                  type="radio"
-                  name="answers[<%= question.id %>]"
-                  value="<%= option.value %>"
-                  class="mt-1 h-4 w-4 border-slate-300 text-sky-600 focus:ring-sky-500"
-                />
-                <span class="text-sm leading-6 text-slate-700"><%= option.value %></span>
+              <label class="premium-option-label">
+                <input type="radio" name="answers[<%= question.id %>]" value="<%= option.value %>" class="premium-radio" onchange="updateQuizProgress()" />
+                <span class="text-sm leading-relaxed text-surface-700"><%= option.value %></span>
               </label>
             <% }) %>
           </div>
@@ -59,11 +70,31 @@
       <% }) %>
     </div>
 
-    <div class="flex items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-sm text-slate-500">Review your answers before submitting. Submission finalises the session.</p>
-      <button class="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200" type="submit">
-        Finalise Evaluation & Submit Answers
+    <div class="flex items-center justify-between gap-4 rounded-2xl border border-surface-200 bg-surface-50 p-5">
+      <div class="flex items-center gap-2 text-sm text-surface-500">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>Review your answers before submitting. Submission finalises the session.</span>
+      </div>
+      <button class="premium-btn premium-btn-secondary" type="submit">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Submit Answers
       </button>
     </div>
   </form>
 </section>
+
+<script>
+  function updateQuizProgress() {
+    const form = document.getElementById('quiz-form');
+    if (!form) return;
+    const radios = form.querySelectorAll('input[type="radio"]');
+    const total = <%= questions.length %>;
+    let answered = 0;
+    radios.forEach(function(radio) { if (radio.checked) answered++; });
+    const bar = document.getElementById('quiz-progress-bar');
+    const text = document.getElementById('quiz-progress-text');
+    if (bar) bar.style.width = (total > 0 ? (answered / total) * 100 : 0) + '%';
+    if (text) text.textContent = answered + ' of ' + total;
+  }
+  document.addEventListener('htmx:afterSwap', function() { updateQuizProgress(); });
+</script>

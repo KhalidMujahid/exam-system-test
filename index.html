@@ -3,746 +3,920 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberCops Academy - Secure Quiz Framework & Management System</title>
+    <title>CyberCops Academy — Secure Assessment Framework</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="logo.jpeg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                        },
+                        colors: {
+                            brand: {
+                                50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                                400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                                800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+                            },
+                            surface: {
+                                50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
+                                400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+                                800: '#1e293b', 900: '#0f172a', 950: '#020617'
+                            }
+                        },
+                        boxShadow: {
+                            'soft': '0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06)',
+                            'medium': '0 4px 6px -1px rgba(15,23,42,0.04), 0 10px 20px -6px rgba(15,23,42,0.08)',
+                            'large': '0 20px 40px -8px rgba(15,23,42,0.12)',
+                            'glow': '0 0 24px -4px rgba(79,70,229,0.25)',
+                            'glow-lg': '0 0 48px -12px rgba(79,70,229,0.35)'
+                        },
+                        animation: {
+                            'fade-in': 'fadeIn 0.4s ease-out',
+                            'slide-up': 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1)',
+                            'scale-in': 'scaleIn 0.3s cubic-bezier(0.16,1,0.3,1)',
+                            'pulse-soft': 'pulseSoft 2s ease-in-out infinite'
+                        },
+                        keyframes: {
+                            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                            slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                            scaleIn: { '0%': { opacity: '0', transform: 'scale(0.96)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+                            pulseSoft: { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.7' } }
+                        }
+                    }
+                }
+            }
+        };
+    </script>
     <style>
-        :root {
-            --primary: #0f172a;
-            --accent: #0284c7;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --text-main: #334155;
-            --text-heading: #0f172a;
-            --border: #e2e8f0;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8fafc;
+            background-image:
+                radial-gradient(ellipse at 15% 50%, rgba(99,102,241,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 50%, rgba(79,70,229,0.04) 0%, transparent 50%);
         }
-
-        .no-print-container {
-            max-width: 850px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-
-        .hidden { display: none !important; }
-
-        header {
-            text-align: center;
-            margin-bottom: 24px;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 16px;
-        }
-
-        header h1 {
-            color: var(--text-heading);
-            margin: 0;
-            font-size: 28px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .system-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .tab-btn {
-            background: #e2e8f0;
-            color: var(--text-main);
-            border: none;
-            padding: 10px 20px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .tab-btn.active {
-            background: var(--accent);
-            color: white;
-        }
-
-        h2 { color: var(--text-heading); margin-top: 0; font-size: 22px; }
-        h3 { color: var(--text-heading); margin-top: 24px; font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-
-        .form-group { margin-bottom: 20px; }
-        .row-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 10px; }
-        label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-heading); }
-        input[type="text"], input[type="password"], input[type="number"], select, textarea {
-            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px;
-            box-sizing: border-box; font-size: 15px; color: var(--text-main); font-family: inherit;
-        }
-        textarea { font-family: monospace; resize: vertical; }
-        input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); }
-
-        .metric-banner {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: 6px;
-            padding: 16px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .metric-title { font-weight: 700; color: #0369a1; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;}
-        .metric-value { font-size: 28px; font-weight: 800; color: var(--primary); }
-
-        .course-option {
-            border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px;
-            margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;
-        }
-        .course-option:hover { border-color: var(--accent); background-color: #f0f9ff; }
-        .course-option input { margin-right: 14px; transform: scale(1.2); }
-
-        .quiz-sticky-header {
-            position: sticky; top: 0; background: var(--bg-card); z-index: 100;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 20px; margin-bottom: 30px; border: 2px solid var(--accent);
-            border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .timer-box { font-size: 20px; font-weight: 700; color: var(--danger); }
-
-        .question-block { margin-bottom: 32px; padding: 20px; border: 1px solid var(--border); border-radius: 6px; }
-        .question-text { font-size: 18px; font-weight: 600; color: var(--text-heading); margin-bottom: 16px; }
-        .option-item {
-            display: flex; align-items: center; padding: 10px; border: 1px solid var(--border);
-            border-radius: 4px; margin-bottom: 8px; cursor: pointer;
-        }
-        .option-item input { margin-right: 12px; transform: scale(1.1); }
-
-        .btn {
-            background-color: var(--primary); color: white; border: none; padding: 12px 24px;
-            font-size: 15px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-block;
-        }
-        .btn:hover { background-color: #1e293b; }
-        .btn-accent { background-color: var(--accent); }
-        .btn-accent:hover { background-color: #0369a1; }
-        .btn-danger { background-color: var(--danger); }
-
-        .certificate-container { background: white; border: 10px double var(--primary); padding: 40px; text-align: center; margin-top: 20px; }
-        .cert-badge { font-size: 24px; font-weight: 800; padding: 8px 16px; display: inline-block; margin-bottom: 20px; border-radius: 4px; }
-        .pass-badge { background-color: #dcfce7; color: var(--success); border: 2px solid var(--success); }
-        .fail-badge { background-color: #fee2e2; color: var(--danger); border: 2px solid var(--danger); }
-        
-        .meta-table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 16px; text-align: left;}
-        .meta-table th, .meta-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-        .meta-table th { background-color: var(--bg-main); width: 35%; color: var(--text-heading); }
-        .cert-footer { margin-top: 40px; border-top: 1px dashed var(--border); padding-top: 20px; font-family: monospace; font-size: 11px; color: #64748b; text-align: left; }
-
-        @media print {
-            body { background: white; color: black; }
-            .no-print-container { max-width: 100%; margin: 0; padding: 0; }
-            .card { border: none; box-shadow: none; padding: 0; }
-            .no-print, .system-tabs, .metric-banner { display: none !important; }
-            .certificate-container { border: 6px double #000; padding: 30px; background: white; page-break-inside: avoid; }
-            .meta-table th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
+        .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid #e2e8f0; }
+        .nav-pill { transition: all 0.2s ease; }
+        .nav-pill.active { background: #1e1b4b; color: #fff; box-shadow: 0 4px 14px -2px rgba(30,27,75,0.25); }
+        .option-card { transition: all 0.2s ease; }
+        .option-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px -4px rgba(15,23,42,0.08); border-color: #a5b4fc; }
+        .option-card.selected { border-color: #4f46e5; background: linear-gradient(135deg,#eef2ff,#f8faff); box-shadow: 0 0 0 1px #4f46e5, 0 4px 16px -4px rgba(79,70,229,0.15); }
+        .progress-fill { transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+        .question-card { transition: all 0.2s ease; }
+        .question-card:hover { box-shadow: 0 4px 24px -8px rgba(15,23,42,0.08); }
+        .option-label { transition: all 0.15s ease; }
+        .option-label:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .option-label:has(input:checked) { background: #eef2ff; border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; }
+        .timer-critical { animation: pulseSoft 1s ease-in-out infinite; }
+        .metric-card { transition: all 0.2s ease; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px -8px rgba(15,23,42,0.1); }
+        .confetti { position: fixed; width: 8px; height: 8px; top: -10px; z-index: 1000; pointer-events: none; animation: confettiFall 3s ease-out forwards; border-radius: 2px; }
+        @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg) scale(1); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg) scale(0.5); opacity: 0; } }
+        @media print { .no-print { display: none !important; } body { background: #fff; } .glass-card { background: #fff; border: none; box-shadow: none; } }
+        input[type="radio"]:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+        ::selection { background: #c7d2fe; color: #1e1b4b; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body>
+<body class="min-h-screen text-surface-700 antialiased scrollbar-thin">
 
-<div class="no-print-container">
-    <header class="no-print">
-        <h1>CyberCops Academy</h1>
-        <p>Assessment System & Administrative Console</p>
-    </header>
-
-    <div class="system-tabs no-print">
-        <button id="tab-portal" class="tab-btn active" onclick="switchMode('portal')">Candidate Testing Portal</button>
-        <button id="tab-admin" class="tab-btn" onclick="switchMode('admin')">🔐 System Administration Panel</button>
-    </div>
-
-    <div id="live-counter-banner" class="metric-banner no-print">
-        <div>
-            <div class="metric-title">Platform Verification Metrics</div>
-            <div style="font-size: 13px; color: #0284c7;">Total authenticated quiz assessment attempts processed:</div>
-        </div>
-        <div id="metric-session-count" class="metric-value">0</div>
-    </div>
-
-    <div class="card">
-        
-        <div id="admin-auth-view" class="hidden">
-            <h2>Administrative Access Challenge</h2>
-            <p style="color: #64748b; margin-top: -10px;">Please authenticate to access deployment logs and runtime track settings.</p>
-            <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 24px;">
-            <div class="form-group">
-                <label for="admin-auth-pass">Console Secret Password Code:</label>
-                <input type="password" id="admin-auth-pass" placeholder="Enter password (Default: admin123)" autocomplete="off">
-            </div>
-            <button class="btn btn-accent" onclick="processAdminGatekeeperAuthentication()">Verify Credentials</button>
-        </div>
-        
-        <div id="admin-panel-view" class="hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2>System Administration Panel</h2>
-                <button class="btn" style="background-color: #64748b; padding: 6px 14px; font-size: 13px;" onclick="logOutAdminConsole()">Lock Session</button>
-            </div>
-            <p style="color: #64748b; margin-top: -10px;">Modify active academic tracks, upload question databases, and alter dynamic test boundaries.</p>
-            <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 24px;">
-
-            <h3>Update Admin Password</h3>
-            <div class="form-group row-grid">
-                <input type="password" id="admin-new-pass" placeholder="Enter new password token">
-                <button class="btn" style="padding: 10px;" onclick="updateConsolePasswordSecret()">Update Secret</button>
-            </div>
-
-            <h3>Track Matrix Configuration</h3>
-            <p style="color: #64748b; font-size: 13px; margin-top: -5px;">Add courses or update parameters. Modifications save automatically to long-term memory registers.</p>
-            <div id="admin-course-rows-container"></div>
-            <button class="btn btn-accent" style="margin-bottom: 24px; padding: 8px 16px; font-size: 13px;" onclick="addNewCourseTrackRow()">＋ Add New Track Row</button>
-
-            <h3>Question Ingestion Console</h3>
-            <div class="form-group">
-                <label for="admin-config-duration">Global Assessment Duration (Minutes):</label>
-                <input type="number" id="admin-config-duration" value="30" min="1" max="180" onchange="saveGlobalAssessmentTimeLimit()">
-            </div>
-
-            <div class="form-group">
-                <label for="admin-target-course">Select Ingestion Target Course Storage Partition:</label>
-                <select id="admin-target-course" onchange="loadSelectedPoolToTextarea()"></select>
-            </div>
-
-            <div class="form-group">
-                <label for="admin-json-payload">Question Data Schema Payload (JSON Array):</label>
-                <textarea id="admin-json-payload" rows="10" placeholder="[{ ... }]"></textarea>
-            </div>
-
-            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                <button class="btn btn-accent" onclick="processAdminIngestion()">Commit Ingestion Payload</button>
-                <button class="btn" style="background-color: #64748b;" onclick="resetPoolToDefault()">Reset Current Track to Sample Seeds</button>
-            </div>
-
-            <h3>System Telemetry & Database Report</h3>
-            <div id="admin-pool-status" style="background: var(--bg-main); padding: 16px; border-radius: 6px; font-family: monospace; font-size: 13px; margin-bottom: 12px;"></div>
-            <button class="btn btn-danger" style="padding: 6px 14px; font-size: 12px;" onclick="resetCounterLogs()">Reset Lifetime Counter Metrics</button>
-        </div>
-
-        <div id="portal-views-container">
-            <div id="registration-view">
-                <h2>Step 1: Participant Registration & Track Selection</h2>
-                <div class="form-group">
-                    <label for="reg-name">Full Name (Legal string verification):</label>
-                    <input type="text" id="reg-name" placeholder="e.g. Inspector John Smith" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label for="reg-inst">Institution / Organisation:</label>
-                    <input type="text" id="reg-inst" placeholder="e.g. Metropolitan Police Service" autocomplete="off">
-                </div>
-
-                <label style="margin-top: 24px;">Select Core Target Assessment Course:</label>
-                <div id="course-selector-container"></div>
-                
-                <button class="btn btn-accent" style="margin-top: 16px; width: 100%;" onclick="initializeQuizSession()">Initialize Assessment Session</button>
-            </div>
-
-            <div id="quiz-view" class="hidden">
-                <div class="quiz-sticky-header no-print">
-                    <div>
-                        <span style="font-size: 14px; text-transform: uppercase; color: #64748b; display: block;">Active Candidate</span>
-                        <strong id="session-candidate-label"></strong>
+    <div class="relative min-h-screen">
+        <!-- Header -->
+        <header class="no-print border-b border-surface-200 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+            <div class="mx-auto max-w-6xl px-6 py-4">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-center gap-4">
+                        <img src="logo.jpeg" alt="CyberCops Academy" class="h-10 w-10 rounded-xl object-cover ring-2 ring-brand-200">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-xl font-bold tracking-tight text-surface-900">CyberCops Academy</h1>
+                                <span class="rounded-full bg-brand-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-700">Assessment</span>
+                            </div>
+                            <p class="text-sm text-surface-500">Secure candidate testing, course management, and certification platform</p>
+                        </div>
                     </div>
-                    <div class="timer-box">TIME REMAINING: <span id="timer-display">30:00</span></div>
+                    <nav class="flex gap-2">
+                        <button id="tab-portal" onclick="switchMode('portal')" class="nav-pill active rounded-xl px-5 py-2.5 text-sm font-medium transition">Candidate Portal</button>
+                        <button id="tab-admin" onclick="switchMode('admin')" class="nav-pill rounded-xl px-5 py-2.5 text-sm font-medium text-surface-600 hover:text-surface-900 transition">Administration</button>
+                    </nav>
                 </div>
-                <div id="active-questions-deck"></div>
-                <button class="btn no-print" style="width: 100%;" onclick="terminateSession(false)">Finalise Evaluation & Submit Answers</button>
             </div>
+        </header>
 
-            <div id="results-view" class="hidden">
-                <div class="no-print" style="margin-bottom: 24px; text-align: right;">
-                    <button class="btn btn-accent" onclick="window.print()">Export Result Summary (PDF)</button>
-                    <button class="btn" style="background-color: #64748b; margin-left: 10px;" onclick="resetEngine()">New Attempt</button>
+        <!-- Metrics -->
+        <div class="no-print mx-auto max-w-6xl px-6 pt-6 pb-4">
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="metric-card glass-card rounded-2xl p-5 shadow-soft">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-surface-500">Platform Metrics</p>
+                            <p class="mt-0.5 text-xs text-surface-400">Total assessments completed</p>
+                            <p class="mt-2 text-3xl font-bold text-surface-900" id="metric-session-count">0</p>
+                        </div>
+                        <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600 ring-1 ring-brand-200/50">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="certificate-container">
-                    <div id="outcome-badge" class="cert-badge"></div>
-                    <h2 style="font-size: 26px; margin-bottom: 5px; text-transform: uppercase;">Official Assessment Report</h2>
-                    <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px;">CyberCops Academy Validation Standard</p>
-                    
-                    <table class="meta-table">
-                        <tr><th>Participant Name</th><td id="pdf-name"></td></tr>
-                        <tr><th>Institution / Organisation</th><td id="pdf-inst"></td></tr>
-                        <tr><th>Assessment Track</th><td id="pdf-course"></td></tr>
-                        <tr><th>Quantitative Score</th><td id="pdf-score" style="font-weight: bold;"></td></tr>
-                        <tr><th>Evaluation Percentage</th><td id="pdf-percentage" style="font-weight: bold;"></td></tr>
-                        <tr><th>Session Timeline Logs</th><td id="pdf-timestamps"></td></tr>
-                    </table>
-
-                    <div class="cert-footer">
-                        <div><strong>SYSTEM AUTHENTICATION SIGNATURE BLOCK:</strong></div>
-                        <div id="pdf-crypto-checksum"></div>
-                        <div style="margin-top: 4px; font-style: italic;">Verified at runtime. Content tamper checks enforced server-side.</div>
+                <div class="metric-card glass-card rounded-2xl p-5 shadow-soft">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-surface-500">Exam Duration</p>
+                            <p class="mt-0.5 text-xs text-surface-400">Configured time limit</p>
+                            <p class="mt-2 text-3xl font-bold text-surface-900"><span id="header-duration">30</span> <span class="text-lg font-medium text-surface-400">min</span></p>
+                        </div>
+                        <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600 ring-1 ring-brand-200/50">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="metric-card glass-card rounded-2xl p-5 shadow-soft">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-surface-500">Active Tracks</p>
+                            <p class="mt-0.5 text-xs text-surface-400">Available courses</p>
+                            <p class="mt-2 text-3xl font-bold text-surface-900" id="header-course-count">5</p>
+                        </div>
+                        <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600 ring-1 ring-brand-200/50">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Main Content -->
+        <main class="mx-auto max-w-6xl px-6 pb-12">
+            <div class="glass-card rounded-2xl shadow-soft overflow-hidden">
+
+                <!-- Admin Auth View -->
+                <div id="admin-auth-view" class="hidden animate-fade-in">
+                    <div class="p-8 sm:p-12">
+                        <div class="mx-auto max-w-sm">
+                            <div class="mb-8 text-center">
+                                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-900 shadow-lg ring-1 ring-white/10">
+                                    <svg class="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                </div>
+                                <h2 class="text-xl font-semibold text-surface-900">Administrative Access</h2>
+                                <p class="mt-1 text-sm text-surface-500">Authenticate to manage system settings and course configurations</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-surface-700">Console Password</label>
+                                    <input type="password" id="admin-auth-pass" placeholder="Enter access password" class="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10" autocomplete="off">
+                                </div>
+                                <button onclick="processAdminGatekeeperAuthentication()" class="w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-surface-800 focus:outline-none focus:ring-4 focus:ring-surface-200">Verify Credentials</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Panel View -->
+                <div id="admin-panel-view" class="hidden animate-fade-in">
+                    <div class="p-8 sm:p-12">
+                        <div class="mb-8 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl font-semibold text-surface-900">System Administration</h2>
+                                <p class="mt-0.5 text-sm text-surface-500">Manage courses, questions, and runtime settings</p>
+                            </div>
+                            <button onclick="logOutAdminConsole()" class="rounded-xl border border-surface-200 bg-white px-5 py-2.5 text-sm font-medium text-surface-700 transition hover:bg-surface-50 focus:outline-none focus:ring-4 focus:ring-surface-100">Lock Session</button>
+                        </div>
+
+                        <div class="mb-8 rounded-2xl border border-surface-200 bg-surface-50/50 p-6">
+                            <h3 class="text-sm font-semibold text-surface-900 mb-3">Update Admin Password</h3>
+                            <div class="flex gap-3">
+                                <input type="password" id="admin-new-pass" placeholder="New password (min 4 characters)" class="flex-1 rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10">
+                                <button onclick="updateConsolePasswordSecret()" class="rounded-xl bg-surface-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-surface-800 focus:outline-none focus:ring-4 focus:ring-surface-200">Update</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <div class="mb-4 flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-surface-900">Track Configuration</h3>
+                                <button onclick="addNewCourseTrackRow()" class="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-200">+ Add Track</button>
+                            </div>
+                            <div id="admin-course-rows-container" class="space-y-2"></div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h3 class="text-sm font-semibold text-surface-900 mb-4">Question Ingestion Console</h3>
+                            <div class="grid gap-6 lg:grid-cols-2">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="mb-1.5 block text-xs font-medium text-surface-600">Global Exam Duration (Minutes)</label>
+                                        <input type="number" id="admin-config-duration" value="30" min="1" max="180" onchange="saveGlobalAssessmentTimeLimit()" class="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-xs font-medium text-surface-600">Target Course</label>
+                                        <select id="admin-target-course" onchange="loadSelectedPoolToTextarea()" class="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"></select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-surface-600">Question Payload (JSON Array)</label>
+                                    <textarea id="admin-json-payload" rows="8" placeholder='[{"Question_ID": "...", ...}]' class="h-44 w-full rounded-xl border border-surface-200 bg-surface-950 px-4 py-3 font-mono text-xs leading-5 text-surface-100 outline-none transition placeholder:text-surface-600 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex gap-3">
+                                <button onclick="processAdminIngestion()" class="rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-200">Commit Payload</button>
+                                <button onclick="resetPoolToDefault()" class="rounded-xl border border-surface-200 bg-white px-5 py-2.5 text-xs font-semibold text-surface-700 transition hover:bg-surface-50 focus:outline-none focus:ring-4 focus:ring-surface-100">Reset to Seeds</button>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-surface-200 bg-surface-50/50 p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-semibold text-surface-900">System Telemetry</h3>
+                                <button onclick="resetCounterLogs()" class="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 focus:outline-none focus:ring-4 focus:ring-rose-100">Reset Counter</button>
+                            </div>
+                            <div id="admin-pool-status" class="rounded-xl bg-white p-4 font-mono text-xs text-surface-600 border border-surface-100 space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portal Views Container -->
+                <div id="portal-views-container">
+
+                    <!-- Registration View -->
+                    <div id="registration-view" class="animate-fade-in">
+                        <div class="p-8 sm:p-12">
+                            <div class="mx-auto max-w-2xl">
+                                <div class="mb-8">
+                                    <div class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-600">
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-100 text-brand-700 text-[11px]">1</span>
+                                        Registration
+                                    </div>
+                                    <h2 class="text-xl font-semibold text-surface-900">Participant Registration & Track Selection</h2>
+                                    <p class="mt-1 text-sm text-surface-500">Enter candidate details and select an assessment track to begin.</p>
+                                </div>
+
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-semibold text-surface-600">Full Name</label>
+                                        <input type="text" id="reg-name" placeholder="e.g. Inspector John Smith" class="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10" autocomplete="name">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-semibold text-surface-600">Institution / Organisation</label>
+                                        <input type="text" id="reg-inst" placeholder="e.g. Metropolitan Police Service" class="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10" autocomplete="organization">
+                                    </div>
+                                </div>
+
+                                <div class="mt-6">
+                                    <label class="mb-3 block text-xs font-semibold text-surface-600">Select Assessment Track</label>
+                                    <div id="course-selector-container" class="grid gap-3 sm:grid-cols-2"></div>
+                                </div>
+
+                                <div class="mt-6 rounded-xl border border-surface-200 bg-surface-50 p-4">
+                                    <div class="flex items-start gap-3">
+                                        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <p class="text-xs text-surface-500">20 randomly selected questions. <span class="font-medium text-surface-700">80% passing threshold</span>. Timer starts on initialization.</p>
+                                    </div>
+                                </div>
+
+                                <button onclick="initializeQuizSession()" class="mt-6 w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-surface-800 focus:outline-none focus:ring-4 focus:ring-surface-200">Initialize Assessment Session</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quiz View -->
+                    <div id="quiz-view" class="hidden">
+                        <div class="sticky top-0 z-10 border-b border-surface-200 bg-white/95 backdrop-blur-md">
+                            <div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold uppercase tracking-wider text-surface-500">Active Candidate</p>
+                                        <p class="text-sm font-semibold text-surface-900 truncate" id="session-candidate-label"></p>
+                                        <p class="text-xs text-surface-500 truncate" id="quiz-course-name"></p>
+                                    </div>
+                                    <div class="flex items-center gap-4 flex-shrink-0">
+                                        <div class="hidden sm:block w-36">
+                                            <div class="flex items-center justify-between text-xs text-surface-500 mb-1">
+                                                <span>Progress</span>
+                                                <span id="quiz-progress-text">0 of 20</span>
+                                            </div>
+                                            <div class="h-1.5 overflow-hidden rounded-full bg-surface-100">
+                                                <div id="quiz-progress-bar" class="progress-fill h-full rounded-full bg-brand-600" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div id="timer-container" class="rounded-xl bg-surface-900 px-4 py-2.5 text-white shadow-sm">
+                                            <div class="text-[10px] font-semibold uppercase tracking-wider text-surface-400">Time Remaining</div>
+                                            <div class="text-xl font-semibold tabular-nums text-white">
+                                                <span id="timer-display">30:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 sm:p-6">
+                            <div id="active-questions-deck" class="mx-auto max-w-3xl space-y-4"></div>
+                            <div class="mx-auto max-w-3xl mt-6">
+                                <button onclick="terminateSession(false)" class="w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-surface-800 focus:outline-none focus:ring-4 focus:ring-surface-200">Finalise Evaluation & Submit Answers</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results View -->
+                    <div id="results-view" class="hidden">
+                        <div class="p-8 sm:p-12">
+                            <div class="no-print mb-6 flex items-center justify-end gap-3">
+                                <button onclick="window.print()" class="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-200">Export PDF Report</button>
+                                <button onclick="resetEngine()" class="rounded-xl border border-surface-200 bg-white px-5 py-2.5 text-sm font-semibold text-surface-700 transition hover:bg-surface-50 focus:outline-none focus:ring-4 focus:ring-surface-100">New Assessment</button>
+                            </div>
+
+                            <div class="mx-auto max-w-2xl">
+                                <div class="relative overflow-hidden rounded-3xl border-8 border-double border-surface-900 bg-white p-8 shadow-2xl sm:p-12 print:border-4">
+                                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none">
+                                        <div class="absolute inset-0" style="background: repeating-linear-gradient(45deg, transparent, transparent 8px, #000 8px, #000 9px)"></div>
+                                    </div>
+                                    <div class="text-center mb-6">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-surface-100 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-surface-600 mb-4">
+                                            Official Assessment Report
+                                        </div>
+                                        <div id="outcome-badge" class="inline-block rounded-xl px-8 py-3 text-2xl font-black uppercase tracking-wide mb-4"></div>
+                                        <div class="flex items-center justify-center gap-3 mb-2">
+                                            <img src="logo.jpeg" alt="" class="h-10 w-10 rounded-xl object-cover ring-2 ring-brand-200">
+                                            <h2 class="text-3xl font-bold text-surface-900">CyberCops Academy</h2>
+                                        </div>
+                                        <p class="text-sm text-surface-500">Validation Standard Certification</p>
+                                    </div>
+
+                                    <div class="max-w-sm mx-auto">
+                                        <table class="w-full text-left text-sm">
+                                            <tbody class="divide-y divide-surface-100">
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Participant</th>
+                                                    <td class="py-3 text-right text-sm text-surface-900 font-semibold" id="pdf-name"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Institution</th>
+                                                    <td class="py-3 text-right text-sm text-surface-700" id="pdf-inst"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Track</th>
+                                                    <td class="py-3 text-right text-sm text-surface-700" id="pdf-course"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Score</th>
+                                                    <td class="py-3 text-right text-sm font-bold text-surface-900" id="pdf-score"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Percentage</th>
+                                                    <td class="py-3 text-right text-sm font-bold text-surface-900" id="pdf-percentage"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Timeline</th>
+                                                    <td class="py-3 text-right text-xs text-surface-500" id="pdf-timestamps"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="mx-auto mt-8 max-w-sm rounded-xl border border-surface-200 bg-surface-50 p-5">
+                                        <p class="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-2">Authentication Signature</p>
+                                        <p id="pdf-crypto-checksum" class="break-all font-mono text-xs text-surface-600"></p>
+                                        <p class="mt-2 text-xs text-surface-400 italic">Verified at runtime.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="no-print mx-auto max-w-6xl px-6 py-8 text-center">
+            <p class="text-xs text-surface-400">CyberCops Academy Assessment System</p>
+        </footer>
     </div>
-</div>
 
-<script>
-    // Global Datastore State Maps
-    let COURSE_MATRIX = {};
-    let COMPREHENSIVE_QUESTION_DATA_INGESTION = {};
-    
-    let global_config_duration_minutes = 30;
-    let session_Active_Questions = [];
-    let session_Timer = null;
-    let seconds_Remaining = 1800; 
-    let timestamp_Start = null;
-    let isAdminAuthenticated = false;
+    <script>
+        let COURSE_MATRIX = {};
+        let COMPREHENSIVE_QUESTION_DATA_INGESTION = {};
+        let global_config_duration_minutes = 30;
+        let session_Active_Questions = [];
+        let session_Timer = null;
+        let seconds_Remaining = 1800;
+        let timestamp_Start = null;
+        let isAdminAuthenticated = false;
+        let answeredQuestions = new Set();
 
-    // Default Seed Ingestion Arrays if LocalStorage registers are blank
-    const TRACK_DEFAULTS = {
-        "CCA-01": "Introduction to Cyber Crime Investigation",
-        "CCA-02": "Digital Forensics and Evidence Preservation",
-        "CCA-03": "Network Security and Traffic Analysis",
-        "CCA-04": "Ethical Hacking and Penetration Testing Fundamentals",
-        "CCA-05": "Cyber Law, Governance, and Incident Response"
-    };
+        const TRACK_DEFAULTS = {
+            "CCA-01": "Introduction to Cyber Crime Investigation",
+            "CCA-02": "Digital Forensics and Evidence Preservation",
+            "CCA-03": "Network Security and Traffic Analysis",
+            "CCA-04": "Ethical Hacking and Penetration Testing Fundamentals",
+            "CCA-05": "Cyber Law, Governance, and Incident Response"
+        };
 
-    function generateFactorySamplePool(courseCode) {
-        return Array.from({length: 22}, (_, i) => ({
-            Question_ID: `${courseCode}-Q-${10000 + i}`,
-            Question_Text: `System-generated Data Node Scenario [${courseCode} Item #${i+1}]: Select the optimal handling criteria under core compliance metrics.`,
-            Option_A: "Primary baseline operations priority structure execution", 
-            Option_B: "Secondary auxiliary processing fallback matrix configuration", 
-            Option_C: "Tertiary perimeter isolation mechanism gamma", 
-            Option_D: "Standard safe sandbox runtime validation loop routine",
-            Correct_Answer: "Primary baseline operations priority structure execution"
-        }));
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        initializePersistentMemoryStorage();
-        refreshCourseDependantUIComponents();
-    });
-
-    /**
-     * LONG-TERM MEMORY ENGINE DEPLOYMENT (LOCAL STORAGE PIPELINES)
-     */
-    function initializePersistentMemoryStorage() {
-        // Set Default Administrator Gatekeeper Key
-        if (!localStorage.getItem('cca_admin_secret')) {
-            localStorage.setItem('cca_admin_secret', 'admin123');
+        function generateFactorySamplePool(courseCode) {
+            return Array.from({length: 22}, (_, i) => ({
+                Question_ID: `${courseCode}-Q-${10000 + i}`,
+                Question_Text: `System-generated Data Node Scenario [${courseCode} Item #${i+1}]: Select the optimal handling criteria under core compliance metrics.`,
+                Option_A: "Primary baseline operations priority structure execution",
+                Option_B: "Secondary auxiliary processing fallback matrix configuration",
+                Option_C: "Tertiary perimeter isolation mechanism gamma",
+                Option_D: "Standard safe sandbox runtime validation loop routine",
+                Correct_Answer: "Primary baseline operations priority structure execution"
+            }));
         }
-        // Set Attempt telemetry flags
-        if (!localStorage.getItem('cca_total_attempts')) {
-            localStorage.setItem('cca_total_attempts', '0');
-        }
-        // Set global boundary parameters
-        if (localStorage.getItem('cca_exam_duration')) {
-            global_config_duration_minutes = parseInt(localStorage.getItem('cca_exam_duration'), 10);
-            document.getElementById('admin-config-duration').value = global_config_duration_minutes;
-        } else {
-            localStorage.setItem('cca_exam_duration', '30');
-        }
-        // Mount Course Matrix index mapping
-        if (localStorage.getItem('cca_course_matrix')) {
-            COURSE_MATRIX = JSON.parse(localStorage.getItem('cca_course_matrix'));
-        } else {
-            COURSE_MATRIX = { ...TRACK_DEFAULTS };
-            localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX));
-        }
-        // Mount Database Core Pools
-        if (localStorage.getItem('cca_question_pools')) {
-            COMPREHENSIVE_QUESTION_DATA_INGESTION = JSON.parse(localStorage.getItem('cca_question_pools'));
-        } else {
-            Object.keys(COURSE_MATRIX).forEach(code => {
-                COMPREHENSIVE_QUESTION_DATA_INGESTION[code] = generateFactorySamplePool(code);
-            });
-            localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION));
-        }
-        document.getElementById('metric-session-count').textContent = localStorage.getItem('cca_total_attempts');
-    }
 
-    function saveCourseMatrixToDisk() {
-        localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX));
-    }
-
-    function saveQuestionPoolsToDisk() {
-        localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION));
-    }
-
-    function saveGlobalAssessmentTimeLimit() {
-        const val = parseInt(document.getElementById('admin-config-duration').value, 10);
-        if(val > 0) {
-            global_config_duration_minutes = val;
-            localStorage.setItem('cca_exam_duration', val.toString());
-            updateAdminStatsReport();
-        }
-    }
-
-    /**
-     * GATEKEEPER PASS ACCESS SECURE CHALLENGE CONTROLLERS
-     */
-    function processAdminGatekeeperAuthentication() {
-        const passwordInput = document.getElementById('admin-auth-pass').value;
-        const savedSecret = localStorage.getItem('cca_admin_secret');
-        if (passwordInput === savedSecret) {
-            isAdminAuthenticated = true;
-            document.getElementById('admin-auth-view').classList.add('hidden');
-            document.getElementById('admin-panel-view').classList.remove('hidden');
-            document.getElementById('admin-auth-pass').value = '';
-            updateAdminStatsReport();
-        } else {
-            alert("Security System Intercept: Authentication Failure. Bad string identifier matched.");
-        }
-    }
-
-    function updateConsolePasswordSecret() {
-        const val = document.getElementById('admin-new-pass').value.trim();
-        if (val.length < 4) {
-            alert("Security Criteria Warning: Access string must be at least 4 characters.");
-            return;
-        }
-        localStorage.setItem('cca_admin_secret', val);
-        document.getElementById('admin-new-pass').value = '';
-        alert("Administrative password credential modified successfully.");
-    }
-
-    function logOutAdminConsole() {
-        isAdminAuthenticated = false;
-        document.getElementById('admin-panel-view').classList.add('hidden');
-        document.getElementById('admin-auth-view').classList.remove('hidden');
-    }
-
-    /**
-     * DYNAMIC COURSE MATRIX ADMINISTRATION LOGIC
-     */
-    function refreshCourseDependantUIComponents() {
-        renderCourseSelectors();
-        populateAdminCourseModifierRows();
-        populateAdminSelectDropdown();
-        loadSelectedPoolToTextarea();
-        updateAdminStatsReport();
-    }
-
-    function populateAdminCourseModifierRows() {
-        const container = document.getElementById('admin-course-rows-container');
-        container.innerHTML = '';
-        Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
-            const div = document.createElement('div');
-            div.className = 'row-grid';
-            div.innerHTML = `
-                <input type="text" value="${code}" placeholder="Course Code" onchange="updateCourseKeyMapping('${code}', this.value, null)">
-                <input type="text" value="${name}" placeholder="Course Title Name" onchange="updateCourseKeyMapping('${code}', null, this.value)">
-            `;
-            container.appendChild(div);
+        window.addEventListener('DOMContentLoaded', () => {
+            initializePersistentMemoryStorage();
+            refreshCourseDependantUIComponents();
         });
-    }
 
-    function addNewCourseTrackRow() {
-        const newCode = `CCA-0${Object.keys(COURSE_MATRIX).length + 1}`;
-        COURSE_MATRIX[newCode] = "New Administrative Target Track Course Title";
-        if (!COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode]) {
-            COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = generateFactorySamplePool(newCode);
-        }
-        saveCourseMatrixToDisk();
-        saveQuestionPoolsToDisk();
-        refreshCourseDependantUIComponents();
-    }
-
-    function updateCourseKeyMapping(oldCode, newCode, newName) {
-        if (newCode && newCode.trim() !== oldCode) {
-            newCode = newCode.trim();
-            COURSE_MATRIX[newCode] = COURSE_MATRIX[oldCode];
-            delete COURSE_MATRIX[oldCode];
-            COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode] || [];
-            delete COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode];
-        } else if (newName !== null) {
-            COURSE_MATRIX[oldCode] = newName.trim();
-        }
-        saveCourseMatrixToDisk();
-        saveQuestionPoolsToDisk();
-        refreshCourseDependantUIComponents();
-    }
-
-    function populateAdminSelectDropdown() {
-        const select = document.getElementById('admin-target-course');
-        const currentSelection = select.value;
-        select.innerHTML = '';
-        Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
-            const opt = document.createElement('option');
-            opt.value = code;
-            opt.textContent = `${code}: ${name}`;
-            if(code === currentSelection) opt.selected = true;
-            select.appendChild(opt);
-        });
-    }
-
-    function loadSelectedPoolToTextarea() {
-        const course = document.getElementById('admin-target-course').value;
-        if (course && COMPREHENSIVE_QUESTION_DATA_INGESTION[course]) {
-            document.getElementById('admin-json-payload').value = JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION[course], null, 2);
-        } else {
-            document.getElementById('admin-json-payload').value = '[]';
-        }
-    }
-
-    function processAdminIngestion() {
-        const course = document.getElementById('admin-target-course').value;
-        const payloadRaw = document.getElementById('admin-json-payload').value;
-
-        try {
-            const parsedArray = JSON.parse(payloadRaw);
-            if (!Array.isArray(parsedArray)) throw new Error("Payload must be a valid structural JSON Array.");
-            
-            parsedArray.forEach((item, idx) => {
-                ['Question_ID', 'Question_Text', 'Option_A', 'Option_B', 'Option_C', 'Option_D', 'Correct_Answer'].forEach(f => {
-                    if (!item[f]) throw new Error(`Index ${idx} missing parameter value string field: "${f}"`);
+        function initializePersistentMemoryStorage() {
+            if (!localStorage.getItem('cca_admin_secret')) localStorage.setItem('cca_admin_secret', 'admin123');
+            if (!localStorage.getItem('cca_total_attempts')) localStorage.setItem('cca_total_attempts', '0');
+            if (localStorage.getItem('cca_exam_duration')) {
+                global_config_duration_minutes = parseInt(localStorage.getItem('cca_exam_duration'), 10);
+                const durationEl = document.getElementById('admin-config-duration');
+                if (durationEl) durationEl.value = global_config_duration_minutes;
+                const headerDuration = document.getElementById('header-duration');
+                if (headerDuration) headerDuration.textContent = global_config_duration_minutes;
+            } else {
+                localStorage.setItem('cca_exam_duration', '30');
+            }
+            if (localStorage.getItem('cca_course_matrix')) {
+                COURSE_MATRIX = JSON.parse(localStorage.getItem('cca_course_matrix'));
+            } else {
+                COURSE_MATRIX = { ...TRACK_DEFAULTS };
+                localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX));
+            }
+            if (localStorage.getItem('cca_question_pools')) {
+                COMPREHENSIVE_QUESTION_DATA_INGESTION = JSON.parse(localStorage.getItem('cca_question_pools'));
+            } else {
+                Object.keys(COURSE_MATRIX).forEach(code => {
+                    COMPREHENSIVE_QUESTION_DATA_INGESTION[code] = generateFactorySamplePool(code);
                 });
-            });
-
-            COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = parsedArray;
-            saveQuestionPoolsToDisk();
-
-            alert(`Storage Permanent Write Success: [${course}] memory tracks synced.`);
-            updateAdminStatsReport();
-            renderCourseSelectors();
-        } catch (err) {
-            alert(`Validation Exception Intercepted: ${err.message}`);
+                localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION));
+            }
+            const counterEl = document.getElementById('metric-session-count');
+            if (counterEl) counterEl.textContent = localStorage.getItem('cca_total_attempts') || '0';
+            const courseCountEl = document.getElementById('header-course-count');
+            if (courseCountEl) courseCountEl.textContent = Object.keys(COURSE_MATRIX).length;
         }
-    }
 
-    function resetPoolToDefault() {
-        const course = document.getElementById('admin-target-course').value;
-        COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = generateFactorySamplePool(course);
-        saveQuestionPoolsToDisk();
-        loadSelectedPoolToTextarea();
-        updateAdminStatsReport();
-        alert(`Memory track wiped and seed indices rolled back.`);
-    }
+        function saveCourseMatrixToDisk() { localStorage.setItem('cca_course_matrix', JSON.stringify(COURSE_MATRIX)); }
+        function saveQuestionPoolsToDisk() { localStorage.setItem('cca_question_pools', JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION)); }
 
-    function updateAdminStatsReport() {
-        const reportContainer = document.getElementById('admin-pool-status');
-        let html = "";
-        Object.keys(COURSE_MATRIX).forEach(code => {
-            const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
-            html += `• Track [${code}] Index Capacity: ${count} items active\n`;
-        });
-        html += `\n• Current Dynamic Runtime Duration Boundary: ${global_config_duration_minutes} Minutes`;
-        html += `\n• Persistent Counter Verification Metric: ${localStorage.getItem('cca_total_attempts') || 0} attempts saved.`;
-        reportContainer.innerText = html;
-    }
+        function saveGlobalAssessmentTimeLimit() {
+            const input = document.getElementById('admin-config-duration');
+            if (!input) return;
+            const val = parseInt(input.value, 10);
+            if (val > 0) {
+                global_config_duration_minutes = val;
+                localStorage.setItem('cca_exam_duration', val.toString());
+                const headerDuration = document.getElementById('header-duration');
+                if (headerDuration) headerDuration.textContent = val;
+                updateAdminStatsReport();
+            }
+        }
 
-    function renderCourseSelectors() {
-        const container = document.getElementById('course-selector-container');
-        container.innerHTML = '';
-        Object.entries(COURSE_MATRIX).forEach(([code, name], index) => {
-            const div = document.createElement('div');
-            div.className = 'course-option';
-            div.onclick = () => { if(document.getElementById(`radio-${code}`)) document.getElementById(`radio-${code}`).checked = true; }
-            const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
-            div.innerHTML = `
-                <input type="radio" name="course-selection" id="radio-${code}" value="${code}" ${index === 0 ? 'checked' : ''}>
-                <div><strong>${code}</strong> - ${name} <span style="color: #64748b; font-size:12px;">(${count} loaded)</span></div>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    function switchMode(mode) {
-        document.getElementById('tab-portal').classList.remove('active');
-        document.getElementById('tab-admin').classList.remove('active');
-        
-        if (mode === 'admin') {
-            document.getElementById('tab-admin').classList.add('active');
-            document.getElementById('portal-views-container').classList.add('hidden');
-            if (isAdminAuthenticated) {
+        function processAdminGatekeeperAuthentication() {
+            const passwordInput = document.getElementById('admin-auth-pass');
+            if (!passwordInput) return;
+            const password = passwordInput.value;
+            if (password === localStorage.getItem('cca_admin_secret')) {
+                isAdminAuthenticated = true;
+                document.getElementById('admin-auth-view').classList.add('hidden');
                 document.getElementById('admin-panel-view').classList.remove('hidden');
+                passwordInput.value = '';
                 updateAdminStatsReport();
             } else {
-                document.getElementById('admin-auth-view').classList.remove('hidden');
+                document.getElementById('admin-auth-pass').focus();
+                document.getElementById('admin-auth-pass').select();
             }
-        } else {
-            document.getElementById('tab-portal').classList.add('active');
-            document.getElementById('admin-panel-view').classList.add('hidden');
-            document.getElementById('admin-auth-view').classList.add('hidden');
-            document.getElementById('portal-views-container').classList.remove('hidden');
         }
-    }
 
-    function incrementAttemptCounter() {
-        let currentCount = parseInt(localStorage.getItem('cca_total_attempts'), 10) || 0;
-        currentCount++;
-        localStorage.setItem('cca_total_attempts', currentCount.toString());
-        document.getElementById('metric-session-count').textContent = currentCount;
-    }
+        function updateConsolePasswordSecret() {
+            const input = document.getElementById('admin-new-pass');
+            if (!input) return;
+            const val = input.value.trim();
+            if (val.length < 4) { input.focus(); input.select(); return; }
+            localStorage.setItem('cca_admin_secret', val);
+            input.value = '';
+        }
 
-    function resetCounterLogs() {
-        if (confirm("Administrative Override: Are you sure you want to completely clear the persistent attempt logs and reset the visitor metrics to 0?")) {
-            localStorage.setItem('cca_total_attempts', '0');
-            document.getElementById('metric-session-count').textContent = '0';
+        function logOutAdminConsole() {
+            isAdminAuthenticated = false;
+            document.getElementById('admin-panel-view').classList.add('hidden');
+            document.getElementById('admin-auth-view').classList.remove('hidden');
+        }
+
+        function refreshCourseDependantUIComponents() {
+            renderCourseSelectors();
+            populateAdminCourseModifierRows();
+            populateAdminSelectDropdown();
+            loadSelectedPoolToTextarea();
             updateAdminStatsReport();
         }
-    }
 
-    /**
-     * TESTING ENGINE OPERATIONS
-     */
-    function executeFisherYatesShuffle(array) {
-        let copy = [...array];
-        for (let i = copy.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [copy[i], copy[j]] = [copy[j], copy[i]];
-        }
-        return copy;
-    }
-
-    function initializeQuizSession() {
-        const nameInput = document.getElementById('reg-name').value.trim();
-        const instInput = document.getElementById('reg-inst').value.trim();
-        const checkedRadio = document.querySelector('input[name="course-selection"]:checked');
-
-        if (!nameInput || !instInput || !checkedRadio) {
-            alert("Validation Intercept: Missing registration input parameters.");
-            return;
-        }
-
-        const selectedCourse = checkedRadio.value;
-        const fullSourcePool = COMPREHENSIVE_QUESTION_DATA_INGESTION[selectedCourse] || [];
-
-        if (fullSourcePool.length < 20) {
-            alert(`Capacity Error: [${selectedCourse}] requires a minimum of 20 items to trigger randomisation loops. Ingest more questions via Admin console.`);
-            return;
-        }
-
-        incrementAttemptCounter();
-
-        timestamp_Start = new Date();
-        document.getElementById('tab-admin').style.display = 'none';
-
-        const randomizedPool = executeFisherYatesShuffle(fullSourcePool);
-        session_Active_Questions = randomizedPool.slice(0, 20);
-
-        document.getElementById('session-candidate-label').textContent = `${nameInput} (${instInput})`;
-        renderQuizQuestionsDeck();
-
-        seconds_Remaining = global_config_duration_minutes * 60;
-        updateTimerDisplay();
-        session_Timer = setInterval(executeTimerCountdownInterval, 1000);
-
-        switchPortalSubView('quiz-view');
-    }
-
-    function renderQuizQuestionsDeck() {
-        const deck = document.getElementById('active-questions-deck');
-        deck.innerHTML = '';
-        session_Active_Questions.forEach((q, index) => {
-            const block = document.createElement('div');
-            block.className = 'question-block';
-            block.dataset.qid = q.Question_ID;
-            block.dataset.correct = q.Correct_Answer;
-
-            const qText = document.createElement('div');
-            qText.className = 'question-text';
-            qText.textContent = `Q${index + 1}. [${q.Question_ID}] ${q.Question_Text}`;
-            block.appendChild(qText);
-
-            const optionsVector = executeFisherYatesShuffle([q.Option_A, q.Option_B, q.Option_C, q.Option_D]);
-            optionsVector.forEach(option => {
-                const label = document.createElement('label');
-                label.className = 'option-item';
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `ans-${q.Question_ID}`;
-                radio.value = option;
-                label.appendChild(radio);
-                label.appendChild(document.createTextNode(option));
-                block.appendChild(label);
+        function populateAdminCourseModifierRows() {
+            const container = document.getElementById('admin-course-rows-container');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-1 gap-2 rounded-xl border border-surface-200 bg-white p-4 sm:grid-cols-12';
+                div.innerHTML = `
+                    <div class="sm:col-span-4">
+                        <label class="mb-1 block text-xs font-medium text-surface-500">Code</label>
+                        <input type="text" value="${code}" placeholder="Course Code" onchange="updateCourseKeyMapping('${code}', this.value, null)" class="w-full rounded-lg border border-surface-200 px-3 py-2 text-xs text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10">
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label class="mb-1 block text-xs font-medium text-surface-500">Title</label>
+                        <input type="text" value="${name}" placeholder="Course Title" onchange="updateCourseKeyMapping('${code}', null, this.value)" class="w-full rounded-lg border border-surface-200 px-3 py-2 text-xs text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10">
+                    </div>
+                    <div class="sm:col-span-2 flex items-end justify-end">
+                        <span class="text-xs text-surface-400">${(COMPREHENSIVE_QUESTION_DATA_INGESTION[code] || []).length} questions</span>
+                    </div>
+                `;
+                container.appendChild(div);
             });
-            deck.appendChild(block);
-        });
-    }
-
-    function executeTimerCountdownInterval() {
-        seconds_Remaining--;
-        updateTimerDisplay();
-        if (seconds_Remaining <= 0) {
-            clearInterval(session_Timer);
-            terminateSession(true);
         }
-    }
 
-    function updateTimerDisplay() {
-        const minutes = Math.floor(seconds_Remaining / 60);
-        const seconds = seconds_Remaining % 60;
-        document.getElementById('timer-display').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
+        function addNewCourseTrackRow() {
+            const newCode = `CCA-0${Object.keys(COURSE_MATRIX).length + 1}`;
+            COURSE_MATRIX[newCode] = "New Administrative Target Track Course Title";
+            if (!COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode]) COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = generateFactorySamplePool(newCode);
+            saveCourseMatrixToDisk();
+            saveQuestionPoolsToDisk();
+            refreshCourseDependantUIComponents();
+        }
 
-    function terminateSession(isTimeExpiry = false) {
-        clearInterval(session_Timer);
-        const timestamp_End = new Date();
+        function updateCourseKeyMapping(oldCode, newCode, newName) {
+            if (newCode && newCode.trim() !== oldCode) {
+                newCode = newCode.trim();
+                COURSE_MATRIX[newCode] = COURSE_MATRIX[oldCode];
+                delete COURSE_MATRIX[oldCode];
+                COMPREHENSIVE_QUESTION_DATA_INGESTION[newCode] = COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode] || [];
+                delete COMPREHENSIVE_QUESTION_DATA_INGESTION[oldCode];
+            } else if (newName !== null) {
+                COURSE_MATRIX[oldCode] = newName.trim();
+            }
+            saveCourseMatrixToDisk();
+            saveQuestionPoolsToDisk();
+            refreshCourseDependantUIComponents();
+        }
 
-        if (isTimeExpiry) alert("Session Expired: Interface locked. Processing evaluation parameters.");
+        function populateAdminSelectDropdown() {
+            const select = document.getElementById('admin-target-course');
+            if (!select) return;
+            const currentSelection = select.value;
+            select.innerHTML = '';
+            Object.entries(COURSE_MATRIX).forEach(([code, name]) => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = `${code}: ${name}`;
+                if (code === currentSelection) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
 
-        const nameInput = document.getElementById('reg-name').value.trim();
-        const instInput = document.getElementById('reg-inst').value.trim();
-        const selectedCourseCode = document.querySelector('input[name="course-selection"]:checked').value;
-        const selectedCourseName = COURSE_MATRIX[selectedCourseCode];
+        function loadSelectedPoolToTextarea() {
+            const select = document.getElementById('admin-target-course');
+            const textarea = document.getElementById('admin-json-payload');
+            if (!select || !textarea) return;
+            const course = select.value;
+            textarea.value = (course && COMPREHENSIVE_QUESTION_DATA_INGESTION[course]) ? JSON.stringify(COMPREHENSIVE_QUESTION_DATA_INGESTION[course], null, 2) : '[]';
+        }
 
-        let rawScore = 0;
-        const totalQuestions = session_Active_Questions.length;
+        function processAdminIngestion() {
+            const select = document.getElementById('admin-target-course');
+            const textarea = document.getElementById('admin-json-payload');
+            if (!select || !textarea) return;
+            const course = select.value;
+            const payloadRaw = textarea.value;
+            try {
+                const parsedArray = JSON.parse(payloadRaw);
+                if (!Array.isArray(parsedArray)) throw new Error("Payload must be a valid JSON array.");
+                parsedArray.forEach((item, idx) => {
+                    ['Question_ID', 'Question_Text', 'Option_A', 'Option_B', 'Option_C', 'Option_D', 'Correct_Answer'].forEach(f => {
+                        if (!item[f]) throw new Error(`Question ${idx + 1} missing field: "${f}"`);
+                    });
+                });
+                COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = parsedArray;
+                saveQuestionPoolsToDisk();
+                updateAdminStatsReport();
+                renderCourseSelectors();
+            } catch (err) {
+                textarea.focus();
+            }
+        }
 
-        document.querySelectorAll('.question-block').forEach(block => {
-            const correctAnswer = block.dataset.correct;
-            const checkedRadio = block.querySelector('input[type="radio"]:checked');
-            const selection = checkedRadio ? checkedRadio.value : null;
+        function resetPoolToDefault() {
+            const select = document.getElementById('admin-target-course');
+            if (!select) return;
+            const course = select.value;
+            COMPREHENSIVE_QUESTION_DATA_INGESTION[course] = generateFactorySamplePool(course);
+            saveQuestionPoolsToDisk();
+            loadSelectedPoolToTextarea();
+            updateAdminStatsReport();
+        }
 
-            block.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
-            if (selection === correctAnswer) rawScore++;
-        });
+        function updateAdminStatsReport() {
+            const container = document.getElementById('admin-pool-status');
+            if (!container) return;
+            let html = "";
+            Object.keys(COURSE_MATRIX).forEach(code => {
+                const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
+                html += `<div class="flex justify-between py-1.5 border-b border-surface-100 last:border-0"><span class="font-semibold text-surface-700">${code}</span><span class="text-surface-500">${count} questions</span></div>`;
+            });
+            html += `<div class="mt-2 pt-2 border-t border-surface-200 flex justify-between text-xs"><span class="font-semibold text-surface-700">Duration</span><span class="text-surface-600">${global_config_duration_minutes} min</span></div>`;
+            html += `<div class="flex justify-between text-xs"><span class="font-semibold text-surface-700">Total Attempts</span><span class="text-surface-600">${localStorage.getItem('cca_total_attempts') || 0}</span></div>`;
+            container.innerHTML = html;
+        }
 
-        const percentageScore = (rawScore / totalQuestions) * 100;
-        const outcomeStatus = percentageScore >= 80 ? "PASS" : "FAIL";
+        function renderCourseSelectors() {
+            const container = document.getElementById('course-selector-container');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.entries(COURSE_MATRIX).forEach(([code, name], index) => {
+                const count = COMPREHENSIVE_QUESTION_DATA_INGESTION[code] ? COMPREHENSIVE_QUESTION_DATA_INGESTION[code].length : 0;
+                const div = document.createElement('div');
+                div.className = 'option-card cursor-pointer rounded-xl border border-surface-200 bg-white p-4';
+                div.onclick = (e) => {
+                    if (e.target.tagName !== 'INPUT') {
+                        const radio = div.querySelector('input[type="radio"]');
+                        if (radio) radio.checked = true;
+                    }
+                };
+                div.innerHTML = `
+                    <label class="flex cursor-pointer items-start gap-3">
+                        <input type="radio" name="course-selection" value="${code}" ${index === 0 ? 'checked' : ''} class="mt-1 h-4 w-4 border-surface-300 text-brand-600 focus:ring-brand-500">
+                        <span class="space-y-1 flex-1">
+                            <span class="block text-sm font-semibold text-surface-900">${code}</span>
+                            <span class="block text-xs text-surface-500">${name}</span>
+                            <span class="block text-xs text-surface-400 mt-1">${count} questions available</span>
+                        </span>
+                        <svg class="h-4 w-4 flex-shrink-0 text-surface-300 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
 
-        document.getElementById('pdf-name').textContent = nameInput;
-        document.getElementById('pdf-inst').textContent = instInput;
-        document.getElementById('pdf-course').textContent = `${selectedCourseCode}: ${selectedCourseName}`;
-        document.getElementById('pdf-score').textContent = `${rawScore} / ${totalQuestions}`;
-        document.getElementById('pdf-percentage').textContent = `${percentageScore.toFixed(1)}%`;
-        document.getElementById('pdf-timestamps').textContent = `Start: ${timestamp_Start.toLocaleTimeString()} | End: ${timestamp_End.toLocaleTimeString()} (${timestamp_End.toLocaleDateString('en-GB')})`;
+        function switchMode(mode) {
+            document.getElementById('tab-portal').classList.toggle('active', mode === 'portal');
+            document.getElementById('tab-admin').classList.toggle('active', mode === 'admin');
+            if (mode === 'admin') {
+                document.getElementById('portal-views-container').classList.add('hidden');
+                if (isAdminAuthenticated) {
+                    document.getElementById('admin-panel-view').classList.remove('hidden');
+                    updateAdminStatsReport();
+                } else {
+                    document.getElementById('admin-auth-view').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('admin-panel-view').classList.add('hidden');
+                document.getElementById('admin-auth-view').classList.add('hidden');
+                document.getElementById('portal-views-container').classList.remove('hidden');
+            }
+        }
 
-        const badge = document.getElementById('outcome-badge');
-        badge.textContent = `STATUS: ${outcomeStatus}`;
-        badge.className = outcomeStatus === "PASS" ? "cert-badge pass-badge" : "cert-badge fail-badge";
+        function incrementAttemptCounter() {
+            let currentCount = parseInt(localStorage.getItem('cca_total_attempts'), 10) || 0;
+            currentCount++;
+            localStorage.setItem('cca_total_attempts', currentCount.toString());
+            const counterEl = document.getElementById('metric-session-count');
+            if (counterEl) {
+                counterEl.textContent = currentCount;
+                counterEl.classList.add('animate-scale-in');
+                setTimeout(() => counterEl.classList.remove('animate-scale-in'), 400);
+            }
+        }
 
-        document.getElementById('pdf-crypto-checksum').textContent = "CCA-SYS-TRK-" + btoa(`${nameInput}|${rawScore}|${timestamp_End.getTime()}`).substring(0, 24).toUpperCase();
+        function resetCounterLogs() {
+            if (confirm("Reset all attempt counters?")) {
+                localStorage.setItem('cca_total_attempts', '0');
+                const counterEl = document.getElementById('metric-session-count');
+                if (counterEl) counterEl.textContent = '0';
+                updateAdminStatsReport();
+            }
+        }
 
-        switchPortalSubView('results-view');
-    }
+        function executeFisherYatesShuffle(array) {
+            let copy = [...array];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
 
-    function switchPortalSubView(subViewId) {
-        ['registration-view', 'quiz-view', 'results-view'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
-        });
-        document.getElementById(subViewId).classList.remove('hidden');
-    }
+        function updateTimerDisplay() {
+            const minutes = Math.max(0, Math.floor(seconds_Remaining / 60));
+            const seconds = Math.max(0, seconds_Remaining % 60);
+            const display = document.getElementById('timer-display');
+            if (display) display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const timerContainer = document.getElementById('timer-container');
+            if (timerContainer) {
+                timerContainer.classList.remove('timer-critical', 'bg-rose-600', 'bg-amber-600');
+                if (seconds_Remaining <= 60) {
+                    timerContainer.classList.add('timer-critical', 'bg-rose-600');
+                } else if (seconds_Remaining <= 300) {
+                    timerContainer.classList.add('bg-amber-600');
+                }
+            }
+        }
 
-    function resetEngine() {
-        document.getElementById('reg-name').value = '';
-        document.getElementById('reg-inst').value = '';
-        document.getElementById('tab-admin').style.display = 'block';
-        refreshCourseDependantUIComponents();
-        switchPortalSubView('registration-view');
-    }
-</script>
+        function initializeQuizSession() {
+            const nameInput = document.getElementById('reg-name').value.trim();
+            const instInput = document.getElementById('reg-inst').value.trim();
+            const checkedRadio = document.querySelector('input[name="course-selection"]:checked');
+            if (!nameInput || !instInput || !checkedRadio) {
+                const firstEmpty = document.getElementById(!nameInput ? 'reg-name' : !instInput ? 'reg-inst' : '');
+                if (firstEmpty) { firstEmpty.focus(); firstEmpty.select(); }
+                return;
+            }
+            const selectedCourse = checkedRadio.value;
+            const fullSourcePool = COMPREHENSIVE_QUESTION_DATA_INGESTION[selectedCourse] || [];
+            if (fullSourcePool.length < 20) {
+                return;
+            }
+            incrementAttemptCounter();
+            timestamp_Start = new Date();
+            const randomizedPool = executeFisherYatesShuffle(fullSourcePool);
+            session_Active_Questions = randomizedPool.slice(0, 20);
+            answeredQuestions = new Set();
+            document.getElementById('session-candidate-label').textContent = `${nameInput} (${instInput})`;
+            const courseName = COURSE_MATRIX[selectedCourse] || selectedCourse;
+            const courseNameEl = document.getElementById('quiz-course-name');
+            if (courseNameEl) courseNameEl.textContent = `${selectedCourse} - ${courseName}`;
+            renderQuizQuestionsDeck();
+            seconds_Remaining = global_config_duration_minutes * 60;
+            updateTimerDisplay();
+            if (session_Timer) clearInterval(session_Timer);
+            session_Timer = setInterval(executeTimerCountdownInterval, 1000);
+            switchPortalSubView('quiz-view');
+        }
+
+        function renderQuizQuestionsDeck() {
+            const deck = document.getElementById('active-questions-deck');
+            if (!deck) return;
+            deck.innerHTML = '';
+            session_Active_Questions.forEach((q, index) => {
+                const block = document.createElement('div');
+                block.className = 'question-card rounded-xl border border-surface-200 bg-white p-5 shadow-sm';
+                block.dataset.qid = q.Question_ID;
+                block.dataset.correct = q.Correct_Answer;
+                const qHeader = document.createElement('div');
+                qHeader.className = 'mb-3 flex items-center justify-between';
+                qHeader.innerHTML = `
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-surface-500">Question ${index + 1} of 20</p>
+                        <p class="mt-0.5 text-xs text-surface-400 font-mono">${q.Question_ID}</p>
+                    </div>
+                `;
+                block.appendChild(qHeader);
+                const qText = document.createElement('div');
+                qText.className = 'text-base font-semibold text-surface-900 mb-4 leading-relaxed';
+                qText.textContent = q.Question_Text;
+                block.appendChild(qText);
+                const optionsVector = executeFisherYatesShuffle([q.Option_A, q.Option_B, q.Option_C, q.Option_D]);
+                optionsVector.forEach(option => {
+                    const label = document.createElement('label');
+                    label.className = 'option-label flex cursor-pointer items-start gap-3 rounded-xl border border-surface-200 bg-white px-4 py-3 mb-2';
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = `ans-${q.Question_ID}`;
+                    radio.value = option;
+                    radio.onchange = () => updateQuizProgress();
+                    label.appendChild(radio);
+                    const span = document.createElement('span');
+                    span.className = 'text-sm leading-6 text-surface-700';
+                    span.textContent = option;
+                    label.appendChild(span);
+                    block.appendChild(label);
+                });
+                deck.appendChild(block);
+            });
+            updateQuizProgress();
+        }
+
+        function updateQuizProgress() {
+            const total = session_Active_Questions.length;
+            let answered = 0;
+            session_Active_Questions.forEach((q) => {
+                const selected = document.querySelector(`input[name="ans-${q.Question_ID}"]:checked`);
+                if (selected) answered++;
+            });
+            const progressBar = document.getElementById('quiz-progress-bar');
+            const progressText = document.getElementById('quiz-progress-text');
+            if (progressBar) progressBar.style.width = `${total > 0 ? (answered / total) * 100 : 0}%`;
+            if (progressText) progressText.textContent = `${answered} of ${total}`;
+        }
+
+        function executeTimerCountdownInterval() {
+            seconds_Remaining--;
+            updateTimerDisplay();
+            if (seconds_Remaining <= 0) {
+                clearInterval(session_Timer);
+                terminateSession(true);
+            }
+        }
+
+        function terminateSession(isTimeExpiry = false) {
+            clearInterval(session_Timer);
+            session_Timer = null;
+            const timestamp_End = new Date();
+            const nameInput = document.getElementById('reg-name').value.trim();
+            const instInput = document.getElementById('reg-inst').value.trim();
+            const checkedRadio = document.querySelector('input[name="course-selection"]:checked');
+            const selectedCourseCode = checkedRadio ? checkedRadio.value : '';
+            const selectedCourseName = COURSE_MATRIX[selectedCourseCode] || selectedCourseCode;
+            let rawScore = 0;
+            const totalQuestions = session_Active_Questions.length;
+            document.querySelectorAll('.question-card').forEach(block => {
+                const correctAnswer = block.dataset.correct;
+                const checkedRadio = block.querySelector('input[type="radio"]:checked');
+                const selection = checkedRadio ? checkedRadio.value : null;
+                block.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
+                if (selection === correctAnswer) rawScore++;
+            });
+            const percentageScore = totalQuestions > 0 ? (rawScore / totalQuestions) * 100 : 0;
+            const outcomeStatus = percentageScore >= 80 ? "PASS" : "FAIL";
+            const nameEl = document.getElementById('pdf-name');
+            const instEl = document.getElementById('pdf-inst');
+            const courseEl = document.getElementById('pdf-course');
+            const scoreEl = document.getElementById('pdf-score');
+            const pctEl = document.getElementById('pdf-percentage');
+            const timeEl = document.getElementById('pdf-timestamps');
+            const badge = document.getElementById('outcome-badge');
+            const checksumEl = document.getElementById('pdf-crypto-checksum');
+            if (nameEl) nameEl.textContent = nameInput;
+            if (instEl) instEl.textContent = instInput;
+            if (courseEl) courseEl.textContent = `${selectedCourseCode}: ${selectedCourseName}`;
+            if (scoreEl) scoreEl.textContent = `${rawScore} / ${totalQuestions}`;
+            if (pctEl) pctEl.textContent = `${percentageScore.toFixed(1)}%`;
+            if (timeEl) timeEl.textContent = `Start: ${timestamp_Start.toLocaleTimeString()} | End: ${timestamp_End.toLocaleTimeString()} (${timestamp_End.toLocaleDateString('en-GB')})`;
+            if (badge) {
+                badge.textContent = `STATUS: ${outcomeStatus}`;
+                if (outcomeStatus === "PASS") {
+                    badge.className = 'inline-block rounded-xl px-8 py-3 text-2xl font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border-2 border-emerald-500 shadow-glow';
+                    createConfetti();
+                } else {
+                    badge.className = 'inline-block rounded-xl px-8 py-3 text-2xl font-black uppercase tracking-wide bg-rose-100 text-rose-700 border-2 border-rose-500';
+                }
+            }
+            if (checksumEl) checksumEl.textContent = "CCA-SYS-TRK-" + btoa(`${nameInput}|${rawScore}|${timestamp_End.getTime()}`).substring(0, 24).toUpperCase();
+            switchPortalSubView('results-view');
+        }
+
+        function createConfetti() {
+            const colors = ['#6366f1', '#4f46e5', '#16a34a', '#dc2626', '#f59e0b', '#06b6d4'];
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    confetti.style.width = (Math.random() * 6 + 4) + 'px';
+                    confetti.style.height = (Math.random() * 6 + 4) + 'px';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 25);
+            }
+        }
+
+        function switchPortalSubView(subViewId) {
+            ['registration-view', 'quiz-view', 'results-view'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.add('hidden'); el.classList.remove('animate-fade-in', 'animate-slide-up'); }
+            });
+            const target = document.getElementById(subViewId);
+            if (target) { target.classList.remove('hidden'); target.classList.add('animate-fade-in'); }
+        }
+
+        function resetEngine() {
+            clearInterval(session_Timer);
+            session_Timer = null;
+            seconds_Remaining = global_config_duration_minutes * 60;
+            answeredQuestions = new Set();
+            const regName = document.getElementById('reg-name');
+            const regInst = document.getElementById('reg-inst');
+            if (regName) regName.value = '';
+            if (regInst) regInst.value = '';
+            const tabAdmin = document.getElementById('tab-admin');
+            if (tabAdmin) tabAdmin.style.display = 'block';
+            const timerContainer = document.getElementById('timer-container');
+            if (timerContainer) timerContainer.classList.remove('timer-critical', 'bg-rose-600', 'bg-amber-600');
+            refreshCourseDependantUIComponents();
+            switchPortalSubView('registration-view');
+        }
+    </script>
 
 </body>
 </html>
