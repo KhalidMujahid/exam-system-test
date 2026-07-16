@@ -5,6 +5,7 @@ const bcrypt = require("bcryptjs");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 const { PrismaClient } = require("@prisma/client");
 
 const app = express();
@@ -13,17 +14,14 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_COOKIE = "cca_admin_auth";
 const DEFAULT_ADMIN_PASSWORD = "admin123";
 const PASS_THRESHOLD = 80;
-const UPLOADS_DIR = __dirname + "/uploads/materials";
 
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
@@ -135,7 +133,9 @@ function isAdminAuthenticated(req) {
 
 function requireAdmin(req, res, next) {
   if (!isAdminAuthenticated(req)) {
-    return res.render("partials/admin-auth", { error: "Please authenticate first." });
+    const isHtmx = req.headers["hx-request"] === "true";
+    if (isHtmx) return res.render("partials/admin-auth", { error: "Please authenticate first." });
+    return res.redirect("/admin/login");
   }
   return next();
 }
@@ -146,8 +146,7 @@ app.get("/", async (req, res, next) => {
     res.render("index", {
       courses: state.courses,
       attemptCounter: state.attemptCounter,
-      examDurationMinutes: state.examDurationMinutes,
-      adminAuthenticated: isAdminAuthenticated(req)
+      examDurationMinutes: state.examDurationMinutes
     });
   } catch (err) {
     next(err);
@@ -166,11 +165,101 @@ app.get("/portal", async (req, res, next) => {
   }
 });
 
+app.get("/verify", async (req, res, next) => {
+  try {
+    const isHtmx = req.headers["hx-request"] === "true";
+    const renderData = { result: null, checksum: "" };
+    if (isHtmx) {
+      return res.render("partials/verify", renderData);
+    }
+    const state = await getAppState();
+    res.render("index", {
+      courses: state.courses,
+      attemptCounter: state.attemptCounter,
+      examDurationMinutes: state.examDurationMinutes,
+      adminAuthenticated: isAdminAuthenticated(req),
+      verifyContent: true,
+      verifyResult: null,
+      verifyChecksum: ""
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/verify", async (req, res, next) => {
+  try {
+    const checksum = (req.body.checksum || "").trim();
+    const isHtmx = req.headers["hx-request"] === "true";
+    const state = await getAppState();
+
+    if (!checksum) {
+      const renderData = { result: null, checksum: "" };
+      if (isHtmx) return res.render("partials/verify", renderData);
+      return res.render("index", {
+        courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
+        adminAuthenticated: isAdminAuthenticated(req), verifyContent: true, verifyResult: null, verifyChecksum: ""
+      });
+    }
+
+    const attempt = await prisma.attempt.findFirst({
+      where: { checksum },
+      include: { course: true }
+    });
+
+    if (!attempt) {
+      const renderData = { result: "not_found", checksum };
+      if (isHtmx) return res.render("partials/verify", renderData);
+      return res.render("index", {
+        courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
+        adminAuthenticated: isAdminAuthenticated(req), verifyContent: true, verifyResult: "not_found", verifyChecksum: checksum
+      });
+    }
+
+    const renderData = { result: attempt, checksum };
+    if (isHtmx) return res.render("partials/verify", renderData);
+    res.render("index", {
+      courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
+      adminAuthenticated: isAdminAuthenticated(req), verifyContent: true, verifyResult: attempt, verifyChecksum: checksum
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/admin/login", async (req, res, next) => {
+  try {
+    const isHtmx = req.headers["hx-request"] === "true";
+    if (isHtmx) {
+      return res.render("partials/admin-auth", { error: null });
+    }
+    const state = await getAppState();
+    res.render("index", {
+      courses: state.courses,
+      attemptCounter: state.attemptCounter,
+      examDurationMinutes: state.examDurationMinutes,
+      adminContent: "auth",
+      adminError: null
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get("/admin", async (req, res, next) => {
   try {
     const state = await getAppState();
+    const isHtmx = req.headers["hx-request"] === "true";
+
     if (!isAdminAuthenticated(req)) {
-      return res.render("partials/admin-auth", { error: null });
+      if (isHtmx) return res.render("partials/admin-auth", { error: null });
+      return res.render("index", {
+        courses: state.courses,
+        attemptCounter: state.attemptCounter,
+        examDurationMinutes: state.examDurationMinutes,
+        adminContent: "auth",
+        adminError: null
+      });
     }
 
     const selectedCourseId = req.query.courseId || (state.courses[0] && state.courses[0].id) || "";
@@ -181,11 +270,24 @@ app.get("/admin", async (req, res, next) => {
         })
       : null;
 
-    res.render("partials/admin-panel", {
+    if (isHtmx) {
+      return res.render("partials/admin-panel", {
+        courses: state.courses,
+        attemptCounter: state.attemptCounter,
+        examDurationMinutes: state.examDurationMinutes,
+        selectedCourse
+      });
+    }
+
+    res.render("index", {
       courses: state.courses,
       attemptCounter: state.attemptCounter,
       examDurationMinutes: state.examDurationMinutes,
-      selectedCourse
+      adminContent: "panel",
+      adminCourses: state.courses,
+      adminAttemptCounter: state.attemptCounter,
+      adminExamDurationMinutes: state.examDurationMinutes,
+      adminSelectedCourse: selectedCourse
     });
   } catch (err) {
     next(err);
@@ -197,9 +299,15 @@ app.post("/admin/login", async (req, res, next) => {
     const password = (req.body.password || "").trim();
     const storedHash = await getSetting("adminPasswordHash");
     const ok = storedHash ? await bcrypt.compare(password, storedHash) : false;
+    const isHtmx = req.headers["hx-request"] === "true";
 
     if (!ok) {
-      return res.render("partials/admin-auth", { error: "Authentication failed." });
+      if (isHtmx) return res.render("partials/admin-auth", { error: "Authentication failed." });
+      const state = await getAppState();
+      return res.render("index", {
+        courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
+        adminContent: "auth", adminError: "Authentication failed."
+      });
     }
 
     res.cookie(ADMIN_COOKIE, "1", { httpOnly: true, sameSite: "lax" });
@@ -211,20 +319,29 @@ app.post("/admin/login", async (req, res, next) => {
         })
       : null;
 
-    res.render("partials/admin-panel", {
-      courses: state.courses,
-      attemptCounter: state.attemptCounter,
-      examDurationMinutes: state.examDurationMinutes,
-      selectedCourse
+    if (isHtmx) {
+      return res.render("partials/admin-panel", {
+        courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes, selectedCourse
+      });
+    }
+
+    res.render("index", {
+      courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes,
+      adminContent: "panel",
+      adminCourses: state.courses, adminAttemptCounter: state.attemptCounter,
+      adminExamDurationMinutes: state.examDurationMinutes, adminSelectedCourse: selectedCourse
     });
   } catch (err) {
     next(err);
   }
 });
 
-app.post("/admin/logout", (req, res) => {
+app.post("/admin/logout", async (req, res) => {
   res.clearCookie(ADMIN_COOKIE);
-  res.render("partials/admin-auth", { error: null });
+  const isHtmx = req.headers["hx-request"] === "true";
+  if (isHtmx) return res.render("partials/admin-auth", { error: null });
+  const state = await getAppState();
+  res.render("index", { courses: state.courses, attemptCounter: state.attemptCounter, examDurationMinutes: state.examDurationMinutes, adminContent: "auth", adminError: null });
 });
 
 app.post("/admin/password", requireAdmin, async (req, res, next) => {
@@ -520,16 +637,34 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
     if (!course) {
       return res.render("partials/admin-alert", { message: "Course not found." });
     }
+
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: "auto",
+          folder: "cca_materials",
+          public_id: `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+
     await prisma.courseMaterial.create({
       data: {
         courseId,
         title: req.body.title || req.file.originalname,
-        filename: req.file.filename,
-        filepath: req.file.path,
+        filename: req.file.originalname,
+        cloudinaryId: result.public_id,
+        url: result.secure_url,
         filesize: req.file.size,
         mimeType: req.file.mimetype
       }
     });
+
     const updatedCourse = await prisma.course.findUnique({
       where: { id: courseId },
       include: { materials: { orderBy: { createdAt: "desc" } } }
@@ -546,23 +681,16 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
   }
 });
 
-app.get("/materials/download/:id", async (req, res, next) => {
-  try {
-    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
-    if (!material) return res.status(404).send("Material not found.");
-    if (!fs.existsSync(material.filepath)) return res.status(404).send("File not found on disk.");
-    res.download(material.filepath, material.filename);
-  } catch (err) {
-    next(err);
-  }
-});
-
 app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => {
   try {
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
     if (!material) return res.render("partials/admin-alert", { message: "Material not found." });
     const courseId = material.courseId;
-    if (fs.existsSync(material.filepath)) fs.unlinkSync(material.filepath);
+
+    try {
+      await cloudinary.uploader.destroy(material.cloudinaryId, { resource_type: "raw" });
+    } catch (_) {}
+
     await prisma.courseMaterial.delete({ where: { id: material.id } });
     const updatedCourse = await prisma.course.findUnique({
       where: { id: courseId },
@@ -670,7 +798,6 @@ app.use((err, req, res, next) => {
 
 async function main() {
   await prisma.$connect();
-  // await ensureSeedData();
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });

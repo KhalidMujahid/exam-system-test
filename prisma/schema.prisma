@@ -84,14 +84,15 @@ model AttemptResponse {
 }
 
 model CourseMaterial {
-  id        String   @id @default(cuid())
-  courseId   String
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title     String
-  filename  String
-  filepath  String
-  filesize  Int
-  mimeType  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  filename     String
+  cloudinaryId String
+  url          String
+  filesize     Int
+  mimeType     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

@@ -1,0 +1,78 @@
+<section class="space-y-6 animate-fade-in">
+  <div class="text-center mb-4">
+    <p class="text-xs font-bold uppercase tracking-widest text-brand-600 mb-1">Certificate Verification</p>
+    <h2 class="text-2xl font-bold tracking-tight text-surface-900">Verify Assessment Certificate</h2>
+    <p class="mt-1 text-sm text-surface-500 max-w-lg mx-auto">Enter the authentication signature from an assessment certificate to verify its authenticity against the database.</p>
+  </div>
+
+  <form method="POST" action="/verify" class="max-w-xl mx-auto space-y-4 premium-card">
+    <div class="space-y-2">
+      <label for="checksum-input" class="premium-label">Authentication Signature</label>
+      <input type="text" id="checksum-input" name="checksum" value="<%= checksum %>" placeholder="e.g. CCA-SYS-TRK-xxxxxxxxxxxxxxxxxxxxxxxx" class="premium-input font-mono text-sm" autocomplete="off" />
+    </div>
+    <button class="premium-btn premium-btn-primary w-full" type="submit">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Verify Certificate
+    </button>
+  </form>
+
+  <% if (result === "not_found") { %>
+    <div class="max-w-xl mx-auto premium-alert premium-alert-error animate-fade-in">
+      <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      <div>
+        <div class="text-sm font-bold">Signature Not Found</div>
+        <div class="mt-1 text-sm">No matching certificate found for the provided authentication signature. Please check the signature and try again.</div>
+      </div>
+    </div>
+  <% } else if (result) { %>
+    <div class="max-w-xl mx-auto premium-alert <%- result.passed ? 'premium-alert-success' : 'premium-alert-error' %> animate-fade-in">
+      <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div>
+        <div class="text-sm font-bold"><%= result.passed ? "Certificate Verified" : "Certificate Found - Failed" %></div>
+        <div class="mt-1 text-sm">This certificate is authentic and registered in the system.</div>
+      </div>
+    </div>
+
+    <div class="max-w-xl mx-auto premium-card">
+      <div class="grid gap-3">
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Participant</span>
+          <span class="text-sm font-semibold text-surface-900"><%= result.candidateName %></span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Institution</span>
+          <span class="text-sm text-surface-700"><%= result.institution %></span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Track</span>
+          <span class="text-sm text-surface-700"><%= result.course.code %>: <%= result.course.name %></span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Score</span>
+          <span class="text-sm font-bold text-surface-900"><%= result.rawScore %> / <%= result.totalQuestions %></span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Percentage</span>
+          <span class="text-sm font-bold text-surface-900"><%= Number(result.percentage).toFixed(1) %>%</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Status</span>
+          <span class="text-sm font-bold <%= result.passed ? 'text-emerald-600' : 'text-rose-600' %>"><%= result.passed ? "PASS" : "FAIL" %></span>
+        </div>
+        <div class="flex justify-between py-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Date</span>
+          <span class="text-xs text-surface-500"><%= result.endedAt ? result.endedAt.toLocaleString("en-GB") : result.createdAt.toLocaleString("en-GB") %></span>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-4 text-left">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="h-4 w-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <p class="text-xs font-bold uppercase tracking-wider text-surface-500">Verified Signature</p>
+        </div>
+        <p class="break-all font-mono text-xs text-emerald-600 bg-white rounded-lg p-3 border border-surface-100"><%= result.checksum %></p>
+        <p class="mt-2 text-xs italic text-surface-400">Signature matched and verified against database records.</p>
+      </div>
+    </div>
+  <% } %>
+</section>

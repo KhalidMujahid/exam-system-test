@@ -59,30 +59,17 @@
             <p class="text-sm text-slate-300 mt-0.5">Secure candidate testing, course management, and certification platform</p>
           </div>
         </div>
-        <div class="flex gap-2">
-          <button
-            class="nav-btn inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20 hover:text-white shadow-sm"
-            data-nav="portal"
-            hx-get="/portal"
-            hx-target="#main"
-            hx-swap="innerHTML"
-            hx-indicator="#global-loader"
-          >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
-            Candidate Portal
-          </button>
-          <button
-            class="nav-btn inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
-            data-nav="admin"
-            hx-get="/admin"
-            hx-target="#main"
-            hx-swap="innerHTML"
-            hx-indicator="#global-loader"
-          >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            Administration
-          </button>
-        </div>
+        <button
+          class="nav-btn inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20 hover:text-white shadow-sm"
+          data-nav="portal"
+          hx-get="/portal"
+          hx-target="#main"
+          hx-swap="innerHTML"
+          hx-indicator="#global-loader"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
+          Candidate Portal
+        </button>
       </div>
     </header>
 
@@ -129,7 +116,15 @@
     </section>
 
     <main id="main" class="relative min-h-[42rem] rounded-2xl border border-surface-200 bg-white/95 p-5 shadow-lg backdrop-blur-sm sm:p-8">
-      <%- include("partials/portal", { courses, examDurationMinutes }) %>
+      <% if (typeof adminContent !== 'undefined' && adminContent === 'auth') { %>
+        <%- include("partials/admin-auth", { error: typeof adminError !== 'undefined' ? adminError : null }) %>
+      <% } else if (typeof adminContent !== 'undefined' && adminContent === 'panel') { %>
+        <%- include("partials/admin-panel", { courses: adminCourses, attemptCounter: adminAttemptCounter, examDurationMinutes: adminExamDurationMinutes, selectedCourse: adminSelectedCourse }) %>
+      <% } else if (typeof verifyContent !== 'undefined' && verifyContent) { %>
+        <%- include("partials/verify", { result: verifyResult, checksum: verifyChecksum }) %>
+      <% } else { %>
+        <%- include("partials/portal", { courses, examDurationMinutes }) %>
+      <% } %>
     </main>
   </div>
 

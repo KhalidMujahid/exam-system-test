@@ -118,7 +118,7 @@
               <p class="text-xs text-surface-400"><%= (mat.filesize / 1024).toFixed(0) %> KB</p>
             </div>
             <div class="flex gap-2 flex-shrink-0">
-              <a href="/materials/download/<%= mat.id %>" class="premium-btn premium-btn-ghost text-xs px-3 py-2">
+              <a href="<%= mat.url %>" target="_blank" class="premium-btn premium-btn-ghost text-xs px-3 py-2">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               </a>
               <form hx-post="/admin/materials/delete/<%= mat.id %>" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="inline">
@@ -137,12 +137,12 @@
 
   <div class="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
     <div class="premium-card">
-      <div class="flex flex-col gap-3 border-b border-surface-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex flex-col gap-3 border-b border-surface-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h3 class="text-base font-bold text-surface-900">Question Ingestion Console</h3>
           <p class="text-sm text-surface-500 mt-0.5">Edit or replace the question pool for a selected track.</p>
         </div>
-        <form hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <form class="flex-shrink-0" hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <label class="sr-only" for="courseId">Select course</label>
           <select id="courseId" name="courseId" class="premium-select" onchange="this.form.requestSubmit()">
             <% courses.forEach(function(course) { %>
