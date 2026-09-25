@@ -1,0 +1,14 @@
+<section class="mx-auto max-w-xl animate-fade-in">
+  <div class="premium-card text-center">
+    <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+      <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <span class="badge badge-warning">Coming soon</span>
+    <h2 class="mt-4 text-2xl font-bold tracking-tight text-surface-900"><%= typeof title !== 'undefined' && title ? title : 'Coming Soon' %></h2>
+    <p class="mx-auto mt-2 max-w-md text-sm text-surface-500 leading-relaxed"><%= typeof message !== 'undefined' && message ? message : 'This feature is coming soon.' %></p>
+    <div class="mt-7 flex flex-wrap justify-center gap-3">
+      <a href="/portal" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-btn premium-btn-primary sm:w-auto">Start an Assessment</a>
+      <a href="/home" hx-get="/home" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-btn premium-btn-ghost sm:w-auto">Back to Dashboard</a>
+    </div>
+  </div>
+</section>

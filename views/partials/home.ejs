@@ -1,0 +1,114 @@
+<%
+  var homepageCourses = (typeof courses !== 'undefined' && courses) ? courses : [];
+  var homepageAttempts = (typeof attemptCounter !== 'undefined') ? attemptCounter : 0;
+  var homepageDuration = (typeof examDurationMinutes !== 'undefined') ? examDurationMinutes : 30;
+%>
+<section class="space-y-8 animate-fade-in">
+  <div class="page-head !mb-0">
+    <span class="page-head-eyebrow">Welcome</span>
+    <h2 class="page-head-title">CyberCops Academy Portal</h2>
+    <p class="page-head-text">Take a timed, paid assessment, explore cybersecurity certification pathways, or verify an issued certificate. Every attempt is validated against the platform database.</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div>
+        <p class="stat-label">Assessments Completed</p>
+        <p class="stat-hint">Lifetime submissions</p>
+        <p class="stat-value"><%= homepageAttempts %></p>
+      </div>
+      <span class="stat-icon">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </span>
+    </div>
+    <div class="stat-card">
+      <div>
+        <p class="stat-label">Exam Duration</p>
+        <p class="stat-hint">Configured time limit</p>
+        <p class="stat-value"><%= homepageDuration %><span class="text-base font-medium text-surface-400 ml-1">min</span></p>
+      </div>
+      <span class="stat-icon">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </span>
+    </div>
+    <div class="stat-card">
+      <div>
+        <p class="stat-label">Active Tracks</p>
+        <p class="stat-hint">Available certifications</p>
+        <p class="stat-value"><%= homepageCourses.length %></p>
+      </div>
+      <span class="stat-icon">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      </span>
+    </div>
+  </div>
+
+  <div>
+    <div class="mb-4 flex items-end justify-between gap-4">
+      <div>
+        <h3 class="text-base font-bold text-surface-900">Get started</h3>
+        <p class="text-sm text-surface-500">Choose a workflow to begin.</p>
+      </div>
+    </div>
+    <div class="grid gap-5 md:grid-cols-3">
+      <a href="/portal" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-card premium-card-hover group block no-underline">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="mt-4 text-base font-bold text-surface-900">Candidate Workflow</h3>
+        <p class="mt-1 text-sm text-surface-500 leading-relaxed">Register a candidate, pay the track fee, and start a timed assessment.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
+          Start Assessment
+          <svg class="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M15 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="/certifications" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-card premium-card-hover group block no-underline">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-50 text-accent-600 transition group-hover:bg-accent-600 group-hover:text-white">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <h3 class="mt-4 text-base font-bold text-surface-900">Cyber Security Certification</h3>
+        <p class="mt-1 text-sm text-surface-500 leading-relaxed">Explore certification pathways, assessment fees, and learning tracks.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-600">
+          View Certifications
+          <svg class="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M15 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="/certificates/generate" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-card premium-card-hover group block no-underline">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 transition group-hover:bg-amber-600 group-hover:text-white">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        </div>
+        <div class="mt-4 flex items-center gap-2">
+          <h3 class="text-base font-bold text-surface-900">Generate Certificate</h3>
+          <span class="badge badge-warning">Coming soon</span>
+        </div>
+        <p class="mt-1 text-sm text-surface-500 leading-relaxed">Produce an official certificate with a verifiable authentication signature.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600">
+          View Status
+          <svg class="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M15 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <div class="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+    <div class="premium-card premium-card-flat flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-surface-900">Verify a certificate</p>
+        <p class="text-xs text-surface-400">Authenticate an assessment report using its signature.</p>
+      </div>
+      <a href="/verify" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-btn premium-btn-primary sm:w-auto">Verify Now</a>
+    </div>
+
+    <div class="premium-card premium-card-flat">
+      <p class="text-xs font-bold uppercase tracking-widest text-brand-600 mb-2">Certification Standards</p>
+      <p class="text-sm text-surface-500 leading-relaxed">
+        <strong class="text-surface-700">80% passing threshold.</strong> 20 randomly selected questions per track, drawn from the live question bank.
+      </p>
+    </div>
+  </div>
+</section>

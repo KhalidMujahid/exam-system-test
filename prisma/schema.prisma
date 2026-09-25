@@ -18,11 +18,14 @@ model Course {
   id        String     @id @default(cuid())
   code      String     @unique
   name      String
+  requiresPayment Boolean @default(false)
+  priceKobo Int        @default(0)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   questions Question[]
   attempts  Attempt[]
   materials CourseMaterial[]
+  payments  Payment[]
 }
 
 model Question {
@@ -81,6 +84,27 @@ model AttemptResponse {
   isCorrect     Boolean
   createdAt     DateTime @default(now())
   attempt       Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id               String    @id @default(cuid())
+  reference        String    @unique
+  candidateName    String
+  institution      String
+  email            String
+  courseId         String
+  course           Course    @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  amount           Int
+  currency         String    @default("NGN")
+  status           String    @default("PENDING")
+  accessCode       String?
+  authorizationUrl String?
+  attemptId        String?
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([courseId])
 }
 
 model CourseMaterial {

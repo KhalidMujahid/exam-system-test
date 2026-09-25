@@ -1,11 +1,11 @@
-<section class="mx-auto max-w-lg space-y-6 animate-fade-in">
+<section class="mx-auto max-w-lg space-y-6 animate-slide-up">
   <div class="text-center">
     <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-900 shadow-lg ring-1 ring-white/10">
       <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
     </div>
-    <p class="text-xs font-bold uppercase tracking-widest text-brand-600 mb-1">Administration Access</p>
-    <h2 class="text-2xl font-bold tracking-tight text-surface-900">Administrative Access</h2>
-    <p class="mt-1 text-sm text-surface-500 max-w-sm mx-auto">Authenticate to edit tracks, manage settings, and review runtime telemetry.</p>
+    <span class="page-head-eyebrow">Administration Access</span>
+    <h2 class="page-head-title !text-2xl">Administrative Access</h2>
+    <p class="mt-1 text-sm text-surface-500 max-w-sm mx-auto">Authenticate to manage tracks, pricing, question banks, and runtime settings.</p>
   </div>
 
   <% if (error) { %>
@@ -17,7 +17,7 @@
 
   <form class="space-y-4 premium-card" hx-post="/admin/login" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
     <div class="space-y-2">
-      <label for="admin-auth-pass" class="premium-label">Console Password</label>
+      <label for="admin-auth-pass" class="premium-label">Console password</label>
       <input type="password" id="admin-auth-pass" name="password" placeholder="Enter admin password" class="premium-input" autocomplete="off" />
     </div>
     <button class="premium-btn premium-btn-primary w-full" type="submit">

@@ -1,0 +1,60 @@
+<%
+  var paidTracks = (typeof courses !== 'undefined' && courses ? courses : []).filter(function(course) {
+    return course.requiresPayment;
+  });
+%>
+<section class="space-y-8 animate-fade-in">
+  <div class="page-head">
+    <span class="page-head-eyebrow">Cyber Security Certification</span>
+    <h2 class="page-head-title">Certification Pathways</h2>
+    <p class="page-head-text">CyberCops Academy cyber security certifications are paid assessments. Complete payment, then sit the timed examination and earn a verifiable certificate.</p>
+  </div>
+
+  <% if (paidTracks.length === 0) { %>
+    <div class="empty-state">
+      <svg class="h-8 w-8 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      <p class="text-sm">No paid certification tracks are configured yet. Please check back soon.</p>
+    </div>
+  <% } else { %>
+    <div class="grid gap-5 md:grid-cols-2">
+      <% paidTracks.forEach(function(course) { %>
+        <div class="premium-card premium-card-hover flex flex-col">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 flex-shrink-0">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-widest text-brand-600"><%= course.code %></p>
+                <h3 class="text-base font-bold text-surface-900"><%= course.name %></h3>
+              </div>
+            </div>
+            <span class="badge badge-info flex-shrink-0">Cyber Security</span>
+          </div>
+
+          <p class="mt-4 text-sm text-surface-500 leading-relaxed flex-1"><%= course._count.questions %> questions in the assessment bank. Timed 20-question examination with an 80% passing threshold.</p>
+
+          <div class="mt-5 flex items-center justify-between gap-3 border-t border-surface-100 pt-4">
+            <span class="text-xs font-bold uppercase tracking-widest text-surface-400">Assessment fee</span>
+            <span class="price-pill price-pill-paid"><%= formatNaira(course.priceKobo) %></span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="premium-card premium-card-flat flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-surface-900">Ready to be certified?</p>
+        <p class="text-xs text-surface-400">Payment is completed before the exam starts. Standard (non-certification) assessments remain free in the candidate portal.</p>
+      </div>
+    </div>
+    <a href="/portal" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-btn premium-btn-primary sm:w-auto">
+      Start Your Assessment
+    </a>
+  </div>
+</section>
