@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
@@ -31,7 +32,13 @@ app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    }
+  })
+);
 app.use(cookieParser());
 app.use(express.static(__dirname + "/public"));
 
@@ -207,6 +214,70 @@ async function createQuizAttempt(course, name, institution) {
   });
 
   return { attempt, questions: selectedQuestions, durationMinutes };
+}
+
+async function loadPaymentWithCourse(reference) {
+  return prisma.payment.findUnique({
+    where: { reference },
+    include: { course: { include: { questions: true } } }
+  });
+}
+
+async function resumePaymentAttempt(payment) {
+  const existing = await prisma.attempt.findUnique({
+    where: { id: payment.attemptId },
+    include: { course: true }
+  });
+  if (!existing) return null;
+
+  const links = await prisma.attemptQuestion.findMany({
+    where: { attemptId: existing.id },
+    orderBy: { position: "asc" },
+    include: { question: true }
+  });
+  const durationMinutes = toSafeInt(await getSetting("examDurationMinutes", "30"), 30);
+
+  return {
+    attempt: existing,
+    course: existing.course,
+    questions: links.map((link) => link.question),
+    durationMinutes
+  };
+}
+
+async function finalizePayment(payment) {
+  if (payment.status === "SUCCESS" && payment.attemptId) {
+    const resumed = await resumePaymentAttempt(payment);
+    if (resumed) return { ok: true, ...resumed };
+  }
+
+  const course = payment.course;
+  if (!course) return { ok: false, reason: "course_missing" };
+  if (course.questions.length < 20) return { ok: false, reason: "insufficient_questions" };
+
+  const { attempt, questions, durationMinutes } = await createQuizAttempt(
+    course,
+    payment.candidateName,
+    payment.institution
+  );
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: "SUCCESS", paidAt: new Date(), attemptId: attempt.id }
+  });
+
+  return { ok: true, attempt, course, questions, durationMinutes };
+}
+
+function verifyPaystackSignature(req) {
+  if (!PAYSTACK_SECRET_KEY || !req.rawBody) return false;
+  const signature = req.headers["x-paystack-signature"];
+  if (!signature) return false;
+  const expected = crypto.createHmac("sha512", PAYSTACK_SECRET_KEY).update(req.rawBody).digest("hex");
+  const provided = Buffer.from(String(signature));
+  const expectedBuffer = Buffer.from(expected);
+  if (provided.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(provided, expectedBuffer);
 }
 
 function isAdminAuthenticated(req) {
@@ -886,30 +957,20 @@ app.get("/payment/callback", async (req, res, next) => {
       return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Missing payment reference." });
     }
 
-    const payment = await prisma.payment.findUnique({
-      where: { reference },
-      include: { course: { include: { questions: true } } }
-    });
-
+    const payment = await loadPaymentWithCourse(reference);
     if (!payment) {
       return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Payment record was not found." });
     }
 
     if (payment.status === "SUCCESS" && payment.attemptId) {
-      const existing = await prisma.attempt.findUnique({ where: { id: payment.attemptId }, include: { course: true } });
-      if (existing) {
-        const links = await prisma.attemptQuestion.findMany({
-          where: { attemptId: existing.id },
-          orderBy: { position: "asc" },
-          include: { question: true }
-        });
-        const durationMinutes = toSafeInt(await getSetting("examDurationMinutes", "30"), 30);
+      const resumed = await resumePaymentAttempt(payment);
+      if (resumed) {
         return renderFullPage(res, {
           quizContent: true,
-          quizAttempt: existing,
-          quizCourse: existing.course,
-          quizQuestions: links.map((link) => link.question),
-          quizDurationMinutes: durationMinutes
+          quizAttempt: resumed.attempt,
+          quizCourse: resumed.course,
+          quizQuestions: resumed.questions,
+          quizDurationMinutes: resumed.durationMinutes
         });
       }
     }
@@ -937,31 +998,60 @@ app.get("/payment/callback", async (req, res, next) => {
       });
     }
 
-    const course = payment.course;
-    if (course.questions.length < 20) {
-      return renderFullPage(res, {
-        quizErrorContent: true,
-        quizErrorMessage: `This track needs at least 20 questions. It currently has ${course.questions.length}.`
-      });
+    const result = await finalizePayment(payment);
+    if (!result.ok) {
+      const message = result.reason === "insufficient_questions"
+        ? `This track needs at least 20 questions. It currently has ${payment.course ? payment.course.questions.length : 0}.`
+        : "This payment could not be linked to an assessment. Please contact the administrator.";
+      return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: message });
     }
-
-    const { attempt, questions, durationMinutes } = await createQuizAttempt(course, payment.candidateName, payment.institution);
-
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: "SUCCESS", paidAt: new Date(), attemptId: attempt.id }
-    });
 
     await renderFullPage(res, {
       quizContent: true,
-      quizAttempt: attempt,
-      quizCourse: course,
-      quizQuestions: questions,
-      quizDurationMinutes: durationMinutes
+      quizAttempt: result.attempt,
+      quizCourse: result.course,
+      quizQuestions: result.questions,
+      quizDurationMinutes: result.durationMinutes
     });
   } catch (err) {
     next(err);
   }
+});
+
+app.post("/paystack/webhook", async (req, res) => {
+  if (!verifyPaystackSignature(req)) {
+    return res.status(401).json({ status: "invalid signature" });
+  }
+
+  const event = req.body || {};
+
+  try {
+    if (event.event === "charge.success" && event.data && event.data.reference) {
+      const reference = String(event.data.reference).trim();
+      const payment = await loadPaymentWithCourse(reference);
+
+      if (!payment) {
+        console.warn(`Paystack webhook: no payment record for reference ${reference}.`);
+      } else {
+        const succeeded = String(event.data.status || "").toLowerCase() === "success";
+        const amountMatches = Number(event.data.amount) === payment.amount;
+        const currencyMatches = String(event.data.currency || "").toUpperCase() === payment.currency.toUpperCase();
+
+        if (succeeded && amountMatches && currencyMatches) {
+          const result = await finalizePayment(payment);
+          if (!result.ok) {
+            console.error(`Paystack webhook: payment ${reference} could not be finalised (${result.reason}).`);
+          }
+        } else {
+          console.warn(`Paystack webhook: charge.success for ${reference} failed validation (status/amount/currency).`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Paystack webhook error:", error);
+  }
+
+  res.sendStatus(200);
 });
 
 app.get("/materials/:courseId", async (req, res, next) => {
