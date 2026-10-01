@@ -1,14 +1,14 @@
 <section class="animate-fade-in">
   <div class="admin-head">
     <div>
-      <span class="page-head-eyebrow">Administration Console</span>
-      <h2 class="page-head-title">System Administration</h2>
-      <p class="page-head-text">Manage candidate pricing, track configuration, question banks, course materials, and runtime controls from a single workspace.</p>
+
+      <h2 class="page-head-title">Admin dashboard</h2>
+      <p class="page-head-text">Manage your courses, learning resources, and assessment settings.</p>
     </div>
     <form hx-post="/admin/logout" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
       <button class="premium-btn premium-btn-ghost" type="submit">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-        Lock Session
+        Sign out
       </button>
     </form>
   </div>
@@ -22,11 +22,11 @@
       </a>
       <a class="admin-nav-link" href="#admin-security">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-        Security &amp; Duration
+        Settings
       </a>
       <a class="admin-nav-link" href="#admin-pricing">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 10v2m0-2c-1.11 0-2.08-.402-2.599-1"/></svg>
-        Tracks &amp; Pricing
+        Courses &amp; Pricing
       </a>
       <a class="admin-nav-link" href="#admin-materials">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -38,17 +38,17 @@
       </a>
       <a class="admin-nav-link" href="#admin-telemetry">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        Telemetry
+        Course summary
       </a>
     </aside>
 
     <div class="admin-content">
       <!-- Overview -->
       <section id="admin-overview" class="admin-section" data-admin-section>
-        <div id="admin-stats">
+        <div class="admin-welcome"><div><h3>Your academy workspace</h3><p>Keep courses ready for learners and manage daily operations.</p></div><a class="btn btn-secondary" href="/materials" target="_blank" rel="noopener">View public library ↗</a></div><div id="admin-stats">
           <%- include("admin-stats", { attemptCounter, examDurationMinutes }) %>
         </div>
-      </section>
+      <div class="admin-quick-grid"><a href="#admin-pricing" data-admin-open="admin-pricing"><strong>Courses &amp; pricing →</strong><span><%= courses.length %> courses configured</span></a><a href="#admin-materials" data-admin-open="admin-materials"><strong>Learning resources →</strong><span>Add links for the public library</span></a><a href="#admin-questions" data-admin-open="admin-questions"><strong>Question bank →</strong><span>Review and update assessment content</span></a></div></section>
 
       <!-- Security & duration -->
       <section id="admin-security" class="admin-section" data-admin-section>
@@ -64,7 +64,7 @@
               <label class="premium-label" for="admin-password">New password</label>
               <div class="flex flex-col gap-3 sm:flex-row">
                 <input type="password" id="admin-password" name="password" placeholder="Enter new password" class="premium-input min-w-0 flex-1" />
-                <button class="premium-btn premium-btn-primary whitespace-nowrap" type="submit">Update Secret</button>
+                <button class="premium-btn premium-btn-primary whitespace-nowrap" type="submit">Save password</button>
               </div>
             </form>
             <div id="admin-message" class="mt-4"></div>
@@ -147,11 +147,12 @@
 
       <!-- Materials -->
       <section id="admin-materials" class="admin-section" data-admin-section>
+        <% if (typeof materialNotice !== 'undefined' && materialNotice) { %><p class="premium-alert premium-alert-info" role="status"><%= materialNotice %></p><% } %>
         <div class="card">
           <div class="card-header">
             <div>
               <h3 class="card-title">Course Materials Library</h3>
-              <p class="card-subtitle">Add Google Drive links for candidates to open per track. No file upload required.</p>
+              <p class="card-subtitle">Add or edit learning resources. All course materials are publicly available so students can study before taking an assessment.</p>
             </div>
             <form hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
               <label class="sr-only" for="matCourseId">Select course</label>
@@ -170,7 +171,7 @@
               <input type="text" name="title" placeholder="e.g. Chapter 1 — Introduction" class="premium-input" />
             </div>
             <div class="flex-[1.5] space-y-2 min-w-0">
-              <label class="premium-label">Google Drive link</label>
+              <label class="premium-label">Material link</label>
               <input type="url" name="linkUrl" placeholder="https://drive.google.com/file/d/..." class="premium-input" />
             </div>
             <button class="premium-btn premium-btn-primary whitespace-nowrap" type="submit">
@@ -194,19 +195,20 @@
                     <a href="/materials/open/<%= mat.id %>" target="_blank" rel="noopener" class="premium-btn premium-btn-ghost text-xs px-3 py-2" aria-label="Open material">
                       <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     </a>
-                    <form hx-post="/admin/materials/delete/<%= mat.id %>" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="inline">
+                    <form hx-post="/admin/materials/delete/<%= mat.id %>" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="inline" hx-confirm="Remove this material from the public library?">
                       <button class="premium-btn premium-btn-danger text-xs px-3 py-2" type="submit" aria-label="Delete material">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                       </button>
                     </form>
                   </div>
                 </div>
+                <details class="material-edit-details"><summary>Edit material information</summary><%- include('material-edit', { material: mat, courses, error: '' }) %></details>
               <% }) %>
             </div>
           <% } else if (selectedCourse) { %>
             <div class="empty-state mt-5">
               <svg class="h-8 w-8 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              <p class="text-sm">No materials uploaded for this track yet.</p>
+              <p class="text-sm">No materials added for this track yet.</p>
             </div>
           <% } %>
         </div>
@@ -253,11 +255,11 @@
               <div class="flex flex-wrap gap-3">
                 <button class="premium-btn premium-btn-primary" type="submit">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                  Commit Payload
+                  Save question bank
                 </button>
-                <button class="premium-btn premium-btn-secondary" type="button" hx-post="/admin/questions/reset" hx-include="[name='courseId']" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+                <button class="premium-btn premium-btn-secondary" type="button" hx-confirm="Replace this course’s question bank with sample questions?" hx-post="/admin/questions/reset" hx-include="closest form" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  Reset to Seeds
+                  Restore sample questions
                 </button>
               </div>
             </div>
@@ -265,15 +267,15 @@
         </div>
       </section>
 
-      <!-- Telemetry -->
+      <!-- Course summary -->
       <section id="admin-telemetry" class="admin-section" data-admin-section>
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">System Telemetry</h3>
+              <h3 class="card-title">Course summary</h3>
               <p class="card-subtitle">Current track capacities, pricing, and runtime settings.</p>
             </div>
-            <form hx-post="/admin/attempts/reset" hx-target="#admin-stats" hx-swap="innerHTML" hx-indicator="#global-loader">
+            <form hx-confirm="Reset the displayed attempt counter to zero? Assessment records will be kept." hx-post="/admin/attempts/reset" hx-target="#admin-stats" hx-swap="innerHTML" hx-indicator="#global-loader">
               <button class="premium-btn premium-btn-danger" type="submit">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Reset Attempt Counter

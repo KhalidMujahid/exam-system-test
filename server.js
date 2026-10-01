@@ -11,6 +11,8 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const ADMIN_COOKIE = "cca_admin_auth";
+const adminSessions = new Map();
+const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_ADMIN_PASSWORD = "admin123";
 const PASS_THRESHOLD = 80;
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
@@ -83,7 +85,7 @@ async function paystackRequest(pathname, options = {}) {
 }
 
 function generatePaymentReference() {
-  const random = Math.random().toString(36).slice(2, 10).toUpperCase();
+  const random = crypto.randomBytes(24).toString("hex");
   return `CCA-PAY-${Date.now()}-${random}`;
 }
 
@@ -99,8 +101,8 @@ function generateFactorySamplePool(courseCode) {
   }));
 }
 
-async function getSetting(key, fallback = null) {
-  const setting = await prisma.setting.findUnique({ where: { key } });
+async function getSetting(key, fallback = null, db = prisma) {
+  const setting = await db.setting.findUnique({ where: { key } });
   return setting ? setting.value : fallback;
 }
 
@@ -179,11 +181,11 @@ async function renderFullPage(res, extra = {}) {
   });
 }
 
-async function createQuizAttempt(course, name, institution) {
+async function createQuizAttempt(course, name, institution, db = prisma) {
   const selectedQuestions = [...course.questions].sort(() => Math.random() - 0.5).slice(0, 20);
-  const durationMinutes = toSafeInt(await getSetting("examDurationMinutes", "30"), 30);
+  const durationMinutes = toSafeInt(await getSetting("examDurationMinutes", "30", db), 30);
 
-  const attempt = await prisma.attempt.create({
+  const attempt = await db.attempt.create({
     data: {
       candidateName: name,
       institution,
@@ -195,7 +197,7 @@ async function createQuizAttempt(course, name, institution) {
     }
   });
 
-  await prisma.attemptQuestion.createMany({
+  await db.attemptQuestion.createMany({
     data: selectedQuestions.map((question, index) => ({
       attemptId: attempt.id,
       questionId: question.id,
@@ -265,27 +267,13 @@ async function finalizePayment(payment) {
     return finalizeCertificatePayment(payment);
   }
 
-  if (payment.status === "SUCCESS" && payment.attemptId) {
-    const resumed = await resumePaymentAttempt(payment);
-    if (resumed) return { ok: true, ...resumed };
-  }
-
-  const course = payment.course;
-  if (!course) return { ok: false, reason: "course_missing" };
-  if (course.questions.length < 20) return { ok: false, reason: "insufficient_questions" };
-
-  const { attempt, questions, durationMinutes } = await createQuizAttempt(
-    course,
-    payment.candidateName,
-    payment.institution
-  );
-
-  await prisma.payment.update({
-    where: { id: payment.id },
-    data: { status: "SUCCESS", paidAt: new Date(), attemptId: attempt.id }
+  if (!payment.course) return { ok: false, reason: "course_missing" };
+  // Payment unlocks the course; the assessment starts only after student registration.
+  await prisma.payment.updateMany({
+    where: { id: payment.id, status: { not: "SUCCESS" } },
+    data: { status: "SUCCESS", paidAt: new Date() }
   });
-
-  return { ok: true, attempt, course, questions, durationMinutes };
+  return { ok: true };
 }
 
 function verifyPaystackSignature(req) {
@@ -299,8 +287,105 @@ function verifyPaystackSignature(req) {
   return crypto.timingSafeEqual(provided, expectedBuffer);
 }
 
+function courseAccessToken(reference) {
+  return crypto.createHmac("sha256", PAYSTACK_SECRET_KEY).update("course-access:" + reference).digest("hex");
+}
+
+function grantCourseAccess(req, res, payment) {
+  if (!PAYSTACK_SECRET_KEY) throw new Error("Course access signing is not configured.");
+  res.cookie("cca_course_" + payment.courseId, payment.reference + "." + courseAccessToken(payment.reference), {
+    httpOnly: true, sameSite: "lax", secure: req.secure || APP_BASE_URL.startsWith("https://"), maxAge: 30 * 24 * 60 * 60 * 1000
+  });
+}
+
+function courseAccessReference(req, courseId) {
+  if (!PAYSTACK_SECRET_KEY) return null;
+  const cookie = req.cookies["cca_course_" + courseId];
+  if (typeof cookie !== "string") return null;
+  const split = cookie.lastIndexOf(".");
+  if (split < 1) return null;
+  const reference = cookie.slice(0, split);
+  const provided = Buffer.from(cookie.slice(split + 1));
+  const expected = Buffer.from(courseAccessToken(reference));
+  return provided.length === expected.length && crypto.timingSafeEqual(provided, expected) ? reference : null;
+}
+
+async function canReadCourse(req, course) {
+  if (!course) return false;
+  if (!course.requiresPayment || isAdminAuthenticated(req)) return true;
+  const reference = courseAccessReference(req, course.id);
+  if (!reference) return false;
+  const payment = await prisma.payment.findUnique({ where: { reference } });
+  return Boolean(payment && payment.courseId === course.id && payment.purpose === "ASSESSMENT" && payment.status === "SUCCESS");
+}
+
+async function authorizedEnrollment(req) {
+  const payment = await loadPaymentWithCourse(req.params.reference);
+  if (!payment || payment.purpose !== "ASSESSMENT" || payment.status !== "SUCCESS" || courseAccessReference(req, payment.courseId) !== payment.reference) return null;
+  return payment;
+}
+
+app.get("/certifications/:id/checkout", async (req, res, next) => {
+  try {
+    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
+    if (!course || !course.requiresPayment) return res.redirect("/certifications");
+    const reference = courseAccessReference(req, course.id);
+    if (reference && await canReadCourse(req, course)) return res.redirect("/courses/access/" + encodeURIComponent(reference));
+    await renderFullPage(res, { courseCheckoutContent: true, checkoutCourse: course });
+  } catch (err) { next(err); }
+});
+
+app.get("/courses/access/:reference", async (req, res, next) => {
+  try {
+    res.set("Cache-Control", "private, no-store");
+    res.set("Referrer-Policy", "no-referrer");
+    const payment = await authorizedEnrollment(req);
+    if (!payment) return res.status(403).send("Please complete payment and return through your payment confirmation link to access this course.");
+    const materials = await prisma.courseMaterial.findMany({ where: { courseId: payment.courseId }, orderBy: { createdAt: "desc" } });
+    await renderFullPage(res, { courseAccessContent: true, enrollment: payment, courseMaterials: materials, registrationError: "" });
+  } catch (err) { next(err); }
+});
+
+app.post("/courses/access/:reference/start", async (req, res, next) => {
+  try {
+    res.set("Cache-Control", "private, no-store");
+    const payment = await authorizedEnrollment(req);
+    if (!payment) return res.status(403).send("Verified course access is required.");
+    const name = typeof req.body.name === "string" ? req.body.name.trim().slice(0, 200) : "";
+    const institution = typeof req.body.institution === "string" ? req.body.institution.trim().slice(0, 200) : "";
+    if (!payment.attemptId && (!name || !institution || payment.course.questions.length < 20)) {
+      const materials = await prisma.courseMaterial.findMany({ where: { courseId: payment.courseId }, orderBy: { createdAt: "desc" } });
+      return renderFullPage(res, { courseAccessContent: true, enrollment: { ...payment, candidateName: name, institution }, courseMaterials: materials, registrationError: !name || !institution ? "Please enter your full name and institution." : "The assessment is not ready yet. Your payment and course access are saved; please contact the academy." });
+    }
+    // Serialize starts for this purchase so double-clicks and retries reuse one attempt.
+    const attemptId = await prisma.$transaction(async (db) => {
+      await db.$queryRaw`SELECT "id" FROM "Payment" WHERE "id" = ${payment.id} FOR UPDATE`;
+      const current = await db.payment.findUnique({ where: { id: payment.id } });
+      if (current.attemptId) return current.attemptId;
+      const result = await createQuizAttempt(payment.course, name, institution, db);
+      await db.payment.update({ where: { id: payment.id }, data: { candidateName: name, institution, attemptId: result.attempt.id } });
+      return result.attempt.id;
+    });
+    const resumed = await resumePaymentAttempt({ ...payment, attemptId });
+    if (!resumed) return res.status(404).send("Assessment not found.");
+    if (resumed.attempt.status === "COMPLETED") return renderFullPage(res, { resultContent: true, resultAttempt: resumed.attempt });
+    await renderFullPage(res, { quizContent: true, quizAttempt: resumed.attempt, quizCourse: resumed.course, quizQuestions: resumed.questions, quizDurationMinutes: resumed.durationMinutes });
+  } catch (err) { next(err); }
+});
+
 function isAdminAuthenticated(req) {
-  return req.cookies[ADMIN_COOKIE] === "1";
+  const token = req.cookies[ADMIN_COOKIE];
+  const expiresAt = adminSessions.get(token);
+  if (expiresAt && expiresAt > Date.now()) return true;
+  if (token) adminSessions.delete(token);
+  return false;
+}
+
+function createAdminSession() {
+  for (const [token, expiresAt] of adminSessions) if (expiresAt <= Date.now()) adminSessions.delete(token);
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, Date.now() + ADMIN_SESSION_MS);
+  return token;
 }
 
 function requireAdmin(req, res, next) {
@@ -819,7 +904,7 @@ app.post("/admin/login", async (req, res, next) => {
       });
     }
 
-    res.cookie(ADMIN_COOKIE, "1", { httpOnly: true, sameSite: "lax" });
+    res.cookie(ADMIN_COOKIE, createAdminSession(), { httpOnly: true, sameSite: "lax", secure: req.secure || APP_BASE_URL.startsWith("https://"), maxAge: ADMIN_SESSION_MS });
 
     if (isHtmx) {
       const state = await getAppState();
@@ -841,6 +926,7 @@ app.post("/admin/login", async (req, res, next) => {
 });
 
 app.post("/admin/logout", async (req, res) => {
+  adminSessions.delete(req.cookies[ADMIN_COOKIE]);
   res.clearCookie(ADMIN_COOKIE);
   const isHtmx = req.headers["hx-request"] === "true";
   if (isHtmx) return res.render("partials/admin-auth", { error: null });
@@ -859,9 +945,10 @@ app.post("/admin/password", requireAdmin, async (req, res, next) => {
 
     const hash = await bcrypt.hash(nextPassword, 10);
     await setSetting("adminPasswordHash", hash);
+    adminSessions.clear();
 
     res.render("partials/admin-alert", {
-      message: "Administrative password updated."
+      message: "Password updated. Please sign in again with your new password."
     });
   } catch (err) {
     next(err);
@@ -1093,10 +1180,10 @@ app.post("/checkout", async (req, res, next) => {
     const institution = (req.body.institution || "").trim();
     const email = (req.body.email || "").trim().toLowerCase();
 
-    if (!name || !institution || !courseId) {
+    if (!courseId) {
       return renderFullPage(res, {
         quizErrorContent: true,
-        quizErrorMessage: "Name, institution, and track are required."
+        quizErrorMessage: "Please select a course."
       });
     }
 
@@ -1131,6 +1218,7 @@ app.post("/checkout", async (req, res, next) => {
     }
 
     if (!course.requiresPayment) {
+      if (!name || !institution) return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Your full name and institution are required." });
       const { attempt, questions, durationMinutes } = await createQuizAttempt(course, name, institution);
       return renderFullPage(res, {
         quizContent: true,
@@ -1152,8 +1240,8 @@ app.post("/checkout", async (req, res, next) => {
     const payment = await prisma.payment.create({
       data: {
         reference,
-        candidateName: name,
-        institution,
+        candidateName: "",
+        institution: "",
         email,
         courseId: course.id,
         amount: course.priceKobo,
@@ -1192,7 +1280,6 @@ app.post("/checkout", async (req, res, next) => {
     await prisma.payment.update({
       where: { id: payment.id },
       data: {
-        status: "PENDING",
         accessCode: initPayload.access_code || null,
         authorizationUrl: initPayload.authorization_url
       }
@@ -1206,70 +1293,20 @@ app.post("/checkout", async (req, res, next) => {
 
 app.get("/payment/callback", async (req, res, next) => {
   try {
-    const reference = (req.query.reference || req.query.trxref || "").trim();
-    if (!reference) {
-      return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Missing payment reference." });
+    const reference = typeof (req.query.reference || req.query.trxref) === "string" ? (req.query.reference || req.query.trxref).trim() : "";
+    const payment = reference ? await loadPaymentWithCourse(reference) : null;
+    if (!payment || payment.purpose !== "ASSESSMENT") return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Assessment payment was not found." });
+    if (payment.status !== "SUCCESS") {
+      const verification = await paystackRequest('/transaction/verify/' + encodeURIComponent(reference), { method: "GET" });
+      const txn = verification.data && verification.data.data;
+      const verified = verification.ok && verification.data.status === true && txn && txn.status === "success" && Number(txn.amount) === payment.amount && txn.currency === payment.currency && txn.reference === reference;
+      if (!verified) return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Payment has not been confirmed. No assessment has started. You can retry this page after completing payment." });
+      const result = await finalizePayment(payment);
+      if (!result.ok) return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Your payment could not be linked to a course. Please contact the academy." });
     }
-
-    const payment = await loadPaymentWithCourse(reference);
-    if (!payment) {
-      return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Payment record was not found." });
-    }
-
-    if (payment.status === "SUCCESS" && payment.attemptId) {
-      const resumed = await resumePaymentAttempt(payment);
-      if (resumed) {
-        return renderFullPage(res, {
-          quizContent: true,
-          quizAttempt: resumed.attempt,
-          quizCourse: resumed.course,
-          quizQuestions: resumed.questions,
-          quizDurationMinutes: resumed.durationMinutes
-        });
-      }
-    }
-
-    const verification = await paystackRequest(`/transaction/verify/${encodeURIComponent(reference)}`, { method: "GET" });
-    const txn = verification.data && verification.data.data;
-    const verified = Boolean(
-      verification.ok &&
-      verification.data &&
-      verification.data.status === true &&
-      txn &&
-      txn.status === "success" &&
-      Number(txn.amount) === payment.amount &&
-      txn.currency === payment.currency
-    );
-
-    if (!verified) {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: txn && txn.status === "abandoned" ? "ABANDONED" : "FAILED" }
-      });
-      return renderFullPage(res, {
-        quizErrorContent: true,
-        quizErrorMessage: (verification.data && verification.data.message) || "Your payment could not be verified. No assessment was started."
-      });
-    }
-
-    const result = await finalizePayment(payment);
-    if (!result.ok) {
-      const message = result.reason === "insufficient_questions"
-        ? `This track needs at least 20 questions. It currently has ${payment.course ? payment.course.questions.length : 0}.`
-        : "This payment could not be linked to an assessment. Please contact the administrator.";
-      return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: message });
-    }
-
-    await renderFullPage(res, {
-      quizContent: true,
-      quizAttempt: result.attempt,
-      quizCourse: result.course,
-      quizQuestions: result.questions,
-      quizDurationMinutes: result.durationMinutes
-    });
-  } catch (err) {
-    next(err);
-  }
+    grantCourseAccess(req, res, payment);
+    res.redirect('/courses/access/' + encodeURIComponent(reference));
+  } catch (err) { next(err); }
 });
 
 app.post("/paystack/webhook", async (req, res) => {
@@ -1308,8 +1345,50 @@ app.post("/paystack/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
+app.get("/materials", async (req, res, next) => {
+  try {
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 200) : "";
+    const courseId = typeof req.query.courseId === "string" ? req.query.courseId : "";
+    const page = Math.max(1, Math.min(10000, toSafeInt(req.query.page, 1)));
+    const where = {
+      ...(courseId ? { courseId } : {}),
+      ...(q ? { OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { course: { name: { contains: q, mode: "insensitive" } } },
+        { course: { code: { contains: q, mode: "insensitive" } } }
+      ] } : {})
+    };
+    const [courses, materials, total] = await Promise.all([
+      prisma.course.findMany({ orderBy: { name: "asc" } }),
+      prisma.courseMaterial.findMany({ where, include: { course: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], skip: (page - 1) * 24, take: 24 }),
+      prisma.courseMaterial.count({ where })
+    ]);
+    const library = { courses, materials, total, q, courseId, page };
+    if (req.headers["hx-request"] === "true") return res.render("partials/materials", { library });
+    await renderFullPage(res, { materialsContent: true, library });
+  } catch (err) { next(err); }
+});
+
+app.get("/materials/download/:id", async (req, res, next) => {
+  try {
+    res.set("Cache-Control", "private, no-store");
+    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id }, include: { course: true } });
+    if (!material) return res.status(404).send("Material not found.");
+    const url = new URL(material.url);
+    if (!["https:", "http:"].includes(url.protocol)) return res.status(400).send("Invalid material link.");
+    if (url.hostname === "drive.google.com") {
+      const fileId = url.pathname.match(/^\/file\/d\/([\w-]+)/)?.[1] || url.searchParams.get("id");
+      if (fileId && /^[\w-]+$/.test(fileId)) return res.redirect(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`);
+    }
+    return res.redirect(url.href);
+  } catch (err) { next(err); }
+});
+
 app.get("/materials/:courseId", async (req, res, next) => {
   try {
+    res.set("Cache-Control", "private, no-store");
+    const course = await prisma.course.findUnique({ where: { id: req.params.courseId } });
+    if (!course) return res.status(404).json({ error: "Course not found." });
     const materials = await prisma.courseMaterial.findMany({
       where: { courseId: req.params.courseId },
       orderBy: { createdAt: "desc" }
@@ -1320,6 +1399,29 @@ app.get("/materials/:courseId", async (req, res, next) => {
   }
 });
 
+app.post("/admin/materials/update/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const existing = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).send("Material not found.");
+    const title = typeof req.body.title === "string" ? req.body.title.trim().slice(0, 300) : "";
+    const url = typeof req.body.linkUrl === "string" ? req.body.linkUrl.trim() : "";
+    const courseId = typeof req.body.courseId === "string" ? req.body.courseId : "";
+    let validUrl = false;
+    try { const parsed = new URL(url); validUrl = ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password; } catch {}
+    const course = courseId ? await prisma.course.findUnique({ where: { id: courseId } }) : null;
+    const state = await getAppState();
+    if (!title || !validUrl || !course) return res.render("partials/material-edit", {
+      material: { ...existing, title, url, courseId }, courses: state.courses,
+      error: !title ? "Enter a material title." : !validUrl ? "Enter a valid http or https link without embedded login details." : "Choose an existing course."
+    });
+    await prisma.courseMaterial.update({ where: { id: existing.id }, data: { title, url, courseId, filename: title } });
+    const selectedCourse = await prisma.course.findUnique({ where: { id: courseId }, include: { questions: { orderBy: { createdAt: "asc" } }, materials: { orderBy: { createdAt: "desc" } } } });
+    res.set("HX-Retarget", "#main");
+    res.set("HX-Reswap", "innerHTML");
+    res.render("partials/admin-panel", { ...state, selectedCourse, materialNotice: "Material updated." });
+  } catch (err) { next(err); }
+});
+
 app.post("/admin/materials", requireAdmin, async (req, res, next) => {
   try {
     const courseId = (req.body.courseId || "").trim();
@@ -1327,7 +1429,7 @@ app.post("/admin/materials", requireAdmin, async (req, res, next) => {
     const linkUrl = (req.body.linkUrl || "").trim();
 
     if (!courseId || !title || !linkUrl) {
-      return res.render("partials/admin-alert", { message: "Course, title, and a Google Drive link are required." });
+      return res.render("partials/admin-alert", { message: "Course, title, and a material link are required." });
     }
     if (!/^https?:\/\//i.test(linkUrl)) {
       return res.render("partials/admin-alert", { message: "The link must be a valid URL starting with http:// or https://." });
@@ -1366,7 +1468,8 @@ app.post("/admin/materials", requireAdmin, async (req, res, next) => {
 
 app.get("/materials/open/:id", async (req, res, next) => {
   try {
-    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
+    res.set("Cache-Control", "private, no-store");
+    const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id }, include: { course: true } });
     if (!material) return res.status(404).send("Material not found.");
     res.redirect(material.url);
   } catch (err) {

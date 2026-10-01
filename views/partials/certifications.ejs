@@ -5,9 +5,9 @@
 %>
 <section class="space-y-8 animate-fade-in">
   <div class="page-head">
-    <span class="page-head-eyebrow">Cyber Security Certification</span>
-    <h2 class="page-head-title">Certification Pathways</h2>
-    <p class="page-head-text">CyberCops Academy cyber security certifications are paid assessments. Complete payment, then sit the timed examination and earn a verifiable certificate.</p>
+
+    <h2 class="page-head-title">Certifications</h2>
+    <p class="page-head-text">Study the free course materials first. When you’re ready, select a course, pay for the assessment, and enter your student details to begin.</p>
   </div>
 
   <% if (paidTracks.length === 0) { %>
@@ -32,12 +32,15 @@
             <span class="badge badge-info flex-shrink-0">Cyber Security</span>
           </div>
 
-          <p class="mt-4 text-sm text-surface-500 leading-relaxed flex-1"><%= course._count.questions %> questions in the assessment bank. Timed 20-question examination with an 80% passing threshold.</p>
+          <p class="mt-4 text-sm text-surface-500 leading-relaxed flex-1">Course materials and a 20-question assessment. Score 80% or above to qualify for a certificate.</p>
 
           <div class="mt-5 flex items-center justify-between gap-3 border-t border-surface-100 pt-4">
-            <span class="text-xs font-bold uppercase tracking-widest text-surface-400">Assessment fee</span>
+            <span class="text-sm text-surface-500">Course and assessment</span>
             <span class="price-pill price-pill-paid"><%= formatNaira(course.priceKobo) %></span>
           </div>
+          <p class="form-hint">Certificate: <%= course.certificatePriceKobo > 0 ? formatNaira(course.certificatePriceKobo) + ' after passing' : 'included after passing' %></p>
+          <a href="/certifications/<%= course.id %>/checkout" class="btn btn-primary mt-5">Select course →</a>
+          <a href="/materials?courseId=<%= course.id %>" class="btn btn-secondary mt-3">View free materials</a>
         </div>
       <% }) %>
     </div>
@@ -49,12 +52,12 @@
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       </div>
       <div>
-        <p class="text-sm font-semibold text-surface-900">Ready to be certified?</p>
-        <p class="text-xs text-surface-400">Payment is completed before the exam starts. Standard (non-certification) assessments remain free in the candidate portal.</p>
+        <p class="text-sm font-semibold text-surface-900">Looking for a free assessment?</p>
+        <p class="text-sm text-surface-500">Free courses are available in the assessment portal.</p>
       </div>
     </div>
     <a href="/portal" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="premium-btn premium-btn-primary sm:w-auto">
-      Start Your Assessment
+      View free assessments
     </a>
   </div>
 </section>

@@ -1,0 +1,7 @@
+<form class="material-edit-form" hx-post="/admin/materials/update/<%= material.id %>" hx-target="this" hx-swap="outerHTML" hx-indicator="#global-loader">
+  <% if (error) { %><p class="premium-alert premium-alert-danger" role="alert"><%= error %></p><% } %>
+  <div><label class="premium-label" for="material-title-<%= material.id %>">Title</label><input class="premium-input w-full" id="material-title-<%= material.id %>" name="title" value="<%= material.title %>" required maxlength="300"></div>
+  <div><label class="premium-label" for="material-url-<%= material.id %>">File or resource link</label><input class="premium-input w-full" id="material-url-<%= material.id %>" name="linkUrl" type="url" value="<%= material.url %>" required></div>
+  <div><label class="premium-label" for="material-course-<%= material.id %>">Course</label><select class="premium-select w-full" id="material-course-<%= material.id %>" name="courseId" required><% courses.forEach(course => { %><option value="<%= course.id %>" <%= material.courseId === course.id ? 'selected' : '' %>><%= course.code %> — <%= course.name %></option><% }) %></select><p class="form-hint">All materials appear in the public library, whether the course assessment is paid or free.</p></div>
+  <button class="btn btn-primary" type="submit">Save changes</button>
+</form>

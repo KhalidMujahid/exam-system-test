@@ -3,27 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="htmx-config" content='{"historyRestoreAsHxRequest":false}' />
   <%
     var navSection = "home";
-    var pageTitle = "Dashboard";
+    var pageTitle = "Overview";
     var pageSubtitle = "Secure candidate testing, course management, and certification platform";
 
-    if (typeof adminContent !== 'undefined' && adminContent === 'auth') {
+    if (typeof courseCheckoutContent !== "undefined" && courseCheckoutContent) {
+      navSection = "certifications"; pageTitle = "Course Payment";
+    } else if (typeof courseAccessContent !== "undefined" && courseAccessContent) {
+      navSection = "certifications"; pageTitle = "Your Course";
+    } else if (typeof resultContent !== "undefined" && resultContent) {
+      navSection = "portal"; pageTitle = "Assessment Result";
+    } else if (typeof materialsContent !== "undefined" && materialsContent) {
+      navSection = "materials"; pageTitle = "Course Materials";
+    } else if (typeof adminContent !== 'undefined' && adminContent === 'auth') {
       navSection = "admin"; pageTitle = "Administrative Access"; pageSubtitle = "Authenticate to manage the platform";
     } else if (typeof adminContent !== 'undefined' && adminContent === 'panel') {
-      navSection = "admin"; pageTitle = "Admin Console"; pageSubtitle = "Tracks, pricing, question banks, and runtime controls";
+      navSection = "admin"; pageTitle = "Admin Dashboard"; pageSubtitle = "Tracks, pricing, question banks, and runtime controls";
     } else if (typeof verifyContent !== 'undefined' && verifyContent) {
       navSection = "verify"; pageTitle = "Verify Certificate"; pageSubtitle = "Authenticate an assessment report by its signature";
     } else if (typeof certificationsContent !== 'undefined' && certificationsContent) {
       navSection = "certifications"; pageTitle = "Certifications"; pageSubtitle = "Explore pathways and assessment fees";
     } else if (typeof portalContent !== 'undefined' && portalContent) {
-      navSection = "portal"; pageTitle = "Candidate Portal"; pageSubtitle = "Register, pay, and start a timed assessment";
+      navSection = "portal"; pageTitle = "Take an Assessment"; pageSubtitle = "Register, pay, and start a timed assessment";
     } else if (typeof quizContent !== 'undefined' && quizContent) {
       navSection = "portal"; pageTitle = "Assessment Session"; pageSubtitle = "Timed examination in progress";
     } else if (typeof quizErrorContent !== 'undefined' && quizErrorContent) {
       navSection = "portal"; pageTitle = "Notice"; pageSubtitle = "Something needs your attention";
     } else if (typeof certificateGenerateContent !== 'undefined' && certificateGenerateContent) {
-      navSection = "certifications"; pageTitle = "Generate Certificate"; pageSubtitle = "Generate a certificate from a passed result";
+      navSection = "generate"; pageTitle = "Generate Certificate"; pageSubtitle = "Generate a certificate from a passed result";
     } else if (typeof certificateViewContent !== 'undefined' && certificateViewContent) {
       navSection = "certifications"; pageTitle = "Certificate"; pageSubtitle = "Your official CyberCops Academy certificate";
     }
@@ -36,45 +45,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="icon" type="image/jpeg" href="/logo.jpeg">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8',
-              500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
-            },
-            surface: {
-              50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8',
-              500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617'
-            },
-            ink: {
-              800: '#131a2b', 900: '#0d1424', 950: '#080d1a'
-            },
-            accent: {
-              50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857'
-            }
-          },
-          boxShadow: {
-            soft: '0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06)',
-            card: '0 1px 2px rgba(15,23,42,0.04), 0 12px 32px -20px rgba(15,23,42,0.25)',
-            elevated: '0 24px 60px -30px rgba(15,23,42,0.35)',
-            glow: '0 0 40px -12px rgba(79,70,229,0.45)'
-          }
-        }
-      }
-    };
-  </script>
+  <link rel="stylesheet" href="/utilities.css">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/design.css">
   <script src="/htmx.min.js" defer></script>
 </head>
 <body class="app-body">
+  <a class="skip-link" href="#main">Skip to main content</a>
   <div class="app-shell" id="app-shell">
     <aside class="app-sidebar" id="app-sidebar" aria-label="Primary navigation">
       <a
@@ -91,39 +68,41 @@
           <span class="sidebar-brand-name">CyberCops Academy</span>
           <span class="sidebar-brand-sub">Assessment Platform</span>
         </span>
-        <span class="badge badge-brand">v2.0</span>
+        <span class="badge badge-brand">v2.0.1</span>
       </a>
 
       <nav class="sidebar-nav">
         <p class="sidebar-group-label">Platform</p>
-        <button class="<%= navClass('home') %>" data-nav="home" hx-get="/home" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <a class="<%= navClass('home') %>" href="/home" hx-push-url="true" data-nav="home" hx-get="/home" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10"/></svg>
-          <span>Dashboard</span>
-        </button>
-        <button class="<%= navClass('portal') %>" data-nav="portal" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+          <span>Overview</span>
+        </a>
+        <a class="<%= navClass('portal') %>" href="/portal" hx-push-url="true" data-nav="portal" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
-          <span>Candidate Portal</span>
-        </button>
-        <button class="<%= navClass('certifications') %>" data-nav="certifications" hx-get="/certifications" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+          <span>Take an Assessment</span>
+        </a>
+        <a class="<%= navClass('certifications') %>" href="/certifications" hx-push-url="true" data-nav="certifications" hx-get="/certifications" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
           <span>Certifications</span>
-        </button>
-        <button class="<%= navClass('verify') %>" data-nav="verify" hx-get="/verify" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        </a>
+        <a class="<%= navClass('verify') %>" href="/verify" hx-push-url="true" data-nav="verify" hx-get="/verify" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
           <span>Verify Certificate</span>
-        </button>
+        </a>
 
+        <a class="<%= navClass('materials') %>" href="/materials" data-nav="materials" hx-get="/materials" hx-target="#main" hx-push-url="true"><svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.6" d="M4 4h7v16H4zM14 4h6v16h-6zM7 8h1m9 0h1"/></svg><span>Course Materials</span></a>
+        <a class="<%= navClass('generate') %>" href="/certificates/generate" data-nav="generate" hx-get="/certificates/generate" hx-target="#main" hx-push-url="true"><svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.6" d="M6 3h12v14H6zM9 17v5l3-2 3 2v-5M9 7h6M9 11h6"/></svg><span>Get Your Certificate</span></a>
         <p class="sidebar-group-label">Administration</p>
-        <button class="<%= navClass('admin') %>" data-nav="admin" hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <a class="<%= navClass('admin') %>" href="/admin" hx-push-url="true" data-nav="admin" hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
           <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          <span>Admin Console</span>
-        </button>
+          <span>Admin Dashboard</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="sidebar-status">
           <span class="status-dot"></span>
-          <span>All systems operational</span>
+          <span>Learning &amp; certification</span>
         </div>
       </div>
     </aside>
@@ -132,15 +111,15 @@
 
     <div class="app-main">
       <header class="app-topbar">
-        <button class="icon-btn" data-sidebar-toggle aria-label="Toggle navigation">
+        <button class="icon-btn" data-sidebar-toggle aria-label="Toggle navigation" aria-controls="app-sidebar" aria-expanded="false">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="topbar-heading">
-          <p class="topbar-eyebrow">CyberCops Academy</p>
+
           <h1 class="topbar-title" data-page-title><%= pageTitle %></h1>
         </div>
         <div class="topbar-actions">
-          <span class="topbar-chip hidden sm:inline-flex"><span class="status-dot"></span> Live</span>
+          <a class="topbar-chip hidden sm:inline-flex" href="/materials">Learning resources ↗</a>
           <button class="btn btn-primary btn-sm" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             New Assessment
@@ -148,8 +127,17 @@
         </div>
       </header>
 
-      <main id="main" class="app-content">
-        <% if (typeof adminContent !== 'undefined' && adminContent === 'auth') { %>
+      <div id="request-notice" class="premium-alert premium-alert-danger" role="alert" hidden></div>
+      <main id="main" class="app-content" tabindex="-1" hx-history="false" hx-history-elt>
+        <% if (typeof courseCheckoutContent !== "undefined" && courseCheckoutContent) { %>
+          <%- include("partials/course-checkout", { checkoutCourse }) %>
+        <% } else if (typeof courseAccessContent !== "undefined" && courseAccessContent) { %>
+          <%- include("partials/course-access", { enrollment, courseMaterials, registrationError, examDurationMinutes }) %>
+        <% } else if (typeof resultContent !== "undefined" && resultContent) { %>
+          <%- include("partials/result-view", { attempt: resultAttempt }) %>
+        <% } else if (typeof materialsContent !== "undefined" && materialsContent) { %>
+          <%- include("partials/materials", { library }) %>
+        <% } else if (typeof adminContent !== 'undefined' && adminContent === 'auth') { %>
           <%- include("partials/admin-auth", { error: typeof adminError !== 'undefined' ? adminError : null }) %>
         <% } else if (typeof adminContent !== 'undefined' && adminContent === 'panel') { %>
           <%- include("partials/admin-panel", { courses: adminCourses, attemptCounter: adminAttemptCounter, examDurationMinutes: adminExamDurationMinutes, selectedCourse: adminSelectedCourse }) %>
@@ -173,8 +161,8 @@
       </main>
 
       <footer class="app-footer">
-        <span>CyberCops Academy · Secure Assessment Framework</span>
-        <span class="app-footer-version">v2.0</span>
+        <span>CyberCops Academy</span>
+        <span class="app-footer-version">v2.0.1</span>
       </footer>
     </div>
   </div>

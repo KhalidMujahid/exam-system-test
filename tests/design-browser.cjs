@@ -1,0 +1,86 @@
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+(async()=>{
+ const browser=await chromium.launch({channel:'msedge',headless:true});
+ try {
+ const page=await browser.newPage({viewport:{width:1440,height:1100}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:3108');
+ await page.waitForLoadState('networkidle');
+ fs.mkdirSync('artifacts',{recursive:true});
+ await page.screenshot({path:'artifacts/overview-desktop.png',fullPage:true});
+ await page.locator('.sidebar-link[data-nav="materials"]').click();
+ await page.locator('#material-search').waitFor();
+ await page.goBack();
+ await page.locator('.page-head-title').filter({hasText:'Overview'}).waitFor();
+ assert.equal(await page.locator('.sidebar-link').count(),7);
+ await page.goForward();
+ await page.locator('#material-search').waitFor();
+ await page.locator('#material-search').fill('Course handbook 1');
+ await page.getByRole('button',{name:'Search resources'}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.resource-card').length===1);
+ assert.match(await page.locator('.resource-card').innerText(),/handbook/);
+ await page.locator('#material-search').fill('not found');
+ await page.getByRole('button',{name:'Search resources'}).click();
+ await page.getByRole('heading',{name:'No matching materials'}).waitFor();
+ await page.goto('http://127.0.0.1:3108/materials');
+ await page.screenshot({path:'artifacts/materials-desktop.png',fullPage:true});
+ await page.goto('http://127.0.0.1:3108/__test/admin-session');
+ await page.goto('http://127.0.0.1:3108/admin');
+ await page.screenshot({path:'artifacts/admin-desktop.png',fullPage:true});
+ await page.locator('.admin-nav-link[href="#admin-materials"]').click();
+ assert.equal(await page.locator('#admin-materials').isVisible(),true);
+ assert.equal(await page.locator('#admin-overview').isVisible(),false);
+ await page.locator('#matCourseId').selectOption('course-2');
+ await page.waitForFunction(()=>document.querySelector('#admin-materials input[name="courseId"]').value==='course-2');
+ assert.equal(await page.locator('#admin-materials').isVisible(),true);
+ const editor=page.locator('.material-edit-details').first();
+ await editor.locator('summary').click();
+ const originalTitle=await editor.locator('input[name="title"]').inputValue();
+ await editor.locator('input[name="title"]').fill('Updated browser handbook');
+ await editor.getByRole('button',{name:'Save changes'}).click();
+ await page.getByRole('status').filter({hasText:'Material updated.'}).waitFor();
+ assert.equal(await page.locator('#admin-materials').isVisible(),true);
+ assert.ok((await page.locator('#admin-materials').innerText()).includes('Updated browser handbook'));
+ const restored=page.locator('.material-edit-details').first();
+ await restored.locator('summary').click();
+ await restored.locator('input[name="title"]').fill(originalTitle);
+ await restored.getByRole('button',{name:'Save changes'}).click();
+ await page.waitForFunction(()=>!document.querySelector('.material-edit-details').open);
+ await page.goto('http://127.0.0.1:3108/certifications');
+ await page.getByRole('link',{name:'Select course'}).click();
+ assert.equal(await page.locator('#checkout-email').count(),1);
+ assert.equal(await page.locator('input[name="institution"]').count(),0);
+ await page.screenshot({path:'artifacts/course-checkout.png',fullPage:true});
+ await page.request.post('http://127.0.0.1:3108/checkout',{form:{courseId:'course-1',email:'browser@example.com'},maxRedirects:0});
+ const {reference}=await page.request.get('http://127.0.0.1:3108/__test/latest-payment').then(r=>r.json());
+ await page.goto('http://127.0.0.1:3108/payment/callback?reference='+reference);
+ await page.locator('#student-name').waitFor();
+ assert.equal(await page.locator('#quiz-form').count(),0);
+ await page.screenshot({path:'artifacts/course-access.png',fullPage:true});
+ await page.locator('#student-name').fill('Browser Student');
+ await page.locator('#student-institution').fill('Test Academy');
+ await page.getByRole('button',{name:'Start assessment',exact:true}).click();
+ await page.locator('#quiz-form').waitFor();
+ assert.equal(await page.locator('#quiz-form input[type="radio"]').count(),80);
+ assert.ok(Number(await page.locator('[data-seconds]').getAttribute('data-seconds'))<=1800);
+ for (const width of [390,768]) {
+   await page.setViewportSize({width,height:844});
+   for (const route of ['/','/materials','/admin','/portal','/certifications','/certifications/course-1/checkout']) {
+     await page.goto('http://127.0.0.1:3108'+route);
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow ${width} ${route}`);
+   }
+ }
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('http://127.0.0.1:3108');
+ await page.locator('[data-sidebar-toggle]').click();
+ assert.equal(await page.locator('[data-sidebar-toggle]').getAttribute('aria-expanded'),'true');
+ await page.locator('.sidebar-link[data-nav="materials"]').click();
+ await page.locator('#material-search').waitFor();
+ assert.equal(await page.locator('[data-sidebar-toggle]').getAttribute('aria-expanded'),'false');
+ await page.screenshot({path:'artifacts/materials-mobile.png',fullPage:true});
+ assert.deepEqual(errors,[]);
+ console.log('PASS: browser search, empty results, admin navigation, course switching, mobile drawer, 390/768px overflow checks, no browser errors.');
+ } finally { await browser.close(); }
+})().catch(e=>{console.error(e);process.exitCode=1;});

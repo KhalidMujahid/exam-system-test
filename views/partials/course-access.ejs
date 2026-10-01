@@ -1,0 +1,31 @@
+<section class="space-y-6">
+  <div class="page-head">
+    <span class="badge badge-success">Payment confirmed</span>
+    <h2 class="page-head-title mt-3"><%= enrollment.course.name %></h2>
+    <p class="page-head-text">Your course is ready. Review the materials below, then start your assessment when you’re prepared.</p>
+  </div>
+  <div class="enrollment-layout course-access-layout">
+    <div class="card">
+      <h3 class="card-title">Course materials</h3>
+      <% if (!courseMaterials.length) { %><p class="text-sm text-surface-500 mt-4">Materials have not been added yet. Your course access is saved.</p><% } %>
+      <div class="course-resource-list" tabindex="0" role="region" aria-label="Course resources">
+        <% courseMaterials.forEach(material => { %>
+          <article><h4><%= material.title %></h4><div><a href="/materials/open/<%= material.id %>" target="_blank" rel="noopener noreferrer">Open ↗</a><a href="/materials/download/<%= material.id %>" target="_blank" rel="noopener noreferrer">Download ↓</a></div></article>
+        <% }) %>
+      </div>
+      <p class="form-hint">Save your payment confirmation link to return to this course. Keep it private.</p>
+    </div>
+    <form class="card space-y-5" method="post" action="/courses/access/<%= enrollment.reference %>/start">
+      <h3 class="card-title"><%= enrollment.attemptId ? 'Your assessment' : 'Student details' %></h3>
+      <% if (registrationError) { %><p class="premium-alert premium-alert-danger" role="alert"><%= registrationError %></p><% } %>
+      <% if (!enrollment.attemptId) { %>
+        <p class="text-sm text-surface-500">Use the name you want on your result and certificate.</p>
+        <div><label class="premium-label" for="student-name">Full name</label><input class="premium-input w-full" id="student-name" name="name" value="<%= enrollment.candidateName %>" maxlength="200" autocomplete="name" required></div>
+        <div><label class="premium-label" for="student-institution">Institution / Organisation</label><input class="premium-input w-full" id="student-institution" name="institution" value="<%= enrollment.institution %>" maxlength="200" autocomplete="organization" required></div>
+        <div><label class="premium-label" for="student-email">Payment email</label><input class="premium-input w-full" id="student-email" value="<%= enrollment.email %>" type="email" readonly></div>
+        <p class="form-hint">20 questions · <%= examDurationMinutes %> minutes · 80% to pass. The timer begins when you select Start assessment.</p>
+      <% } else { %><p class="text-sm text-surface-500">Continue your existing assessment or view your result if you have already submitted.</p><% } %>
+      <button class="btn btn-primary w-full" type="submit"><%= enrollment.attemptId ? 'Continue to assessment' : 'Start assessment' %></button>
+    </form>
+  </div>
+</section>

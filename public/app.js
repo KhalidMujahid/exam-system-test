@@ -1,13 +1,14 @@
 let timerHandle = null;
 
 const PAGE_META = {
-  "/home": { nav: "home", title: "Dashboard" },
-  "/portal": { nav: "portal", title: "Candidate Portal" },
+  "/home": { nav: "home", title: "Overview" },
+  "/materials": { nav: "materials", title: "Course Materials" },
+  "/portal": { nav: "portal", title: "Take an Assessment" },
   "/certifications": { nav: "certifications", title: "Certifications" },
   "/verify": { nav: "verify", title: "Verify Certificate" },
-  "/admin": { nav: "admin", title: "Admin Console" },
+  "/admin": { nav: "admin", title: "Admin Dashboard" },
   "/admin/login": { nav: "admin", title: "Administrative Access" },
-  "/certificates/generate": { nav: "home", title: "Coming Soon" }
+  "/certificates/generate": { nav: "generate", title: "Generate Certificate" }
 };
 
 function setLoaderVisible(visible) {
@@ -19,6 +20,8 @@ function setLoaderVisible(visible) {
 function setActiveNav(target) {
   document.querySelectorAll("[data-nav]").forEach((el) => {
     el.classList.toggle("is-active", el.dataset.nav === target);
+    if (el.dataset.nav === target) el.setAttribute('aria-current', 'page');
+    else el.removeAttribute('aria-current');
   });
 }
 
@@ -30,6 +33,10 @@ function updatePageTitle(title) {
 
 function routeMeta(path) {
   if (!path) return null;
+  if (path === "/") return PAGE_META["/home"];
+  path = path.split("?")[0];
+  if (path.startsWith('/certifications/')) return { nav: 'certifications', title: 'Course Payment' };
+  if (path.startsWith('/courses/access/')) return { nav: 'certifications', title: 'Your Course' };
   if (path === "/admin/login") return PAGE_META["/admin/login"];
   if (path === "/admin" || path.startsWith("/admin/")) return PAGE_META["/admin"];
   return PAGE_META[path] || null;
@@ -41,17 +48,19 @@ function routeMeta(path) {
 function openSidebar() {
   const shell = document.getElementById("app-shell");
   if (shell) shell.classList.add("is-sidebar-open");
+  document.querySelector('[data-sidebar-toggle]')?.setAttribute('aria-expanded', 'true');
 }
 function closeSidebar() {
   const shell = document.getElementById("app-shell");
   if (shell) shell.classList.remove("is-sidebar-open");
+  document.querySelector('[data-sidebar-toggle]')?.setAttribute('aria-expanded', 'false');
 }
 function bindSidebar() {
   const shell = document.getElementById("app-shell");
   if (!shell) return;
 
   shell.querySelectorAll("[data-sidebar-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => shell.classList.toggle("is-sidebar-open"));
+    btn.addEventListener("click", () => shell.classList.contains('is-sidebar-open') ? closeSidebar() : openSidebar());
   });
   shell.querySelectorAll("[data-sidebar-close]").forEach((btn) => {
     btn.addEventListener("click", closeSidebar);
@@ -67,9 +76,9 @@ function bindSidebar() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Admin section navigation (smooth scroll + scrollspy)               */
+/* Admin workspace navigation               */
 /* ------------------------------------------------------------------ */
-let adminScrollSpy = null;
+
 
 function initAdminNav() {
   const nav = document.querySelector("[data-admin-nav]");
@@ -78,33 +87,29 @@ function initAdminNav() {
 
   const links = Array.from(nav.querySelectorAll('a[href^="#"]'));
 
-  links.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      const target = document.querySelector(link.getAttribute("href"));
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-        history.replaceState(null, "", link.getAttribute("href"));
-      }
-      links.forEach((l) => l.classList.toggle("is-active", l === link));
+  const activate = (id) => {
+    const selected = sections.find(section => section.id === id) || sections[0];
+    sections.forEach(section => { section.hidden = section !== selected; });
+    links.forEach(link => {
+      const active = link.hash === '#' + selected.id;
+      link.classList.toggle('is-active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     });
-  });
+    nav.dataset.activeSection = selected.id;
+  };
+  activate(nav.dataset.activeSection || location.hash.slice(1));
+  if (nav.dataset.bound === '1') return;
+  nav.dataset.bound = '1';
+  document.querySelectorAll('[data-admin-open]').forEach(link => link.addEventListener('click', event => {
+    event.preventDefault(); activate(link.dataset.adminOpen);
+    history.replaceState(null, '', '#' + link.dataset.adminOpen);
+  }));
+  links.forEach(link => link.addEventListener('click', event => {
+    event.preventDefault(); activate(link.hash.slice(1));
+    history.replaceState(null, '', link.hash);
+  }));
 
-  if (adminScrollSpy) adminScrollSpy.disconnect();
-  if (!("IntersectionObserver" in window)) return;
-
-  adminScrollSpy = new IntersectionObserver(
-    (entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (!visible) return;
-      const id = visible.target.id;
-      links.forEach((link) => link.classList.toggle("is-active", link.getAttribute("href") === "#" + id));
-    },
-    { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.4, 0.75] }
-  );
-  sections.forEach((section) => adminScrollSpy.observe(section));
 }
 
 /* ------------------------------------------------------------------ */
@@ -165,13 +170,15 @@ function bindTimer() {
   const form = document.getElementById("quiz-form");
   const timerContainer = timer ? timer.closest("[data-timer-root]") : null;
 
-  if (!timer || !display || !form || timer.dataset.bound === "1") return;
+  if (!timer || !display || !form) return;
 
   timer.dataset.bound = "1";
-  let seconds = Number(timer.dataset.seconds || 0);
+  const deadline = Number(timer.dataset.deadline) || Date.now() + Number(timer.dataset.seconds || 0) * 1000;
+  timer.dataset.deadline = String(deadline);
+  let seconds;
 
   const tick = () => {
-    seconds -= 1;
+    seconds = Math.ceil((deadline - Date.now()) / 1000);
     const minutes = Math.max(0, Math.floor(seconds / 60));
     const remaining = Math.max(0, seconds % 60);
     display.textContent = `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
@@ -226,7 +233,10 @@ function refreshDynamicUI() {
   initAdminNav();
 
   const outcomeBadge = document.getElementById("outcome-badge");
-  if (outcomeBadge && outcomeBadge.textContent.includes("PASS")) createConfetti();
+  if (outcomeBadge && outcomeBadge.textContent.includes("PASS") && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && !outcomeBadge.dataset.celebrated) {
+    outcomeBadge.dataset.celebrated = '1';
+    createConfetti();
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -234,23 +244,44 @@ function refreshDynamicUI() {
 /* ------------------------------------------------------------------ */
 document.addEventListener("DOMContentLoaded", () => {
   setLoaderVisible(false);
+  const meta = routeMeta(location.pathname);
+  if (meta) setActiveNav(meta.nav);
   bindSidebar();
   refreshDynamicUI();
 });
 
-document.addEventListener("htmx:beforeRequest", () => setLoaderVisible(true));
+document.addEventListener("htmx:beforeRequest", () => {
+  setLoaderVisible(true);
+  const notice = document.getElementById('request-notice');
+  if (notice) notice.hidden = true;
+});
 document.addEventListener("htmx:responseError", () => setLoaderVisible(false));
+document.addEventListener("htmx:afterRequest", (event) => {
+  setLoaderVisible(false);
+  if (event.detail.failed) {
+    const notice = document.getElementById('request-notice');
+    if (notice) { notice.hidden = false; notice.textContent = 'We could not complete that request. Check your connection and try again.'; }
+  }
+});
+document.addEventListener('htmx:historyRestore', () => {
+  const meta = routeMeta(location.pathname);
+  if (meta) { setActiveNav(meta.nav); updatePageTitle(meta.title); }
+  refreshDynamicUI();
+});
 
 document.addEventListener("htmx:afterSwap", (event) => {
   setLoaderVisible(false);
 
   if (event.detail.target && event.detail.target.id === "main") {
-    const path = (event.detail.pathInfo && event.detail.pathInfo.requestPath) || "";
+    const path = (event.detail.pathInfo && event.detail.pathInfo.requestPath) || location.pathname;
     const meta = routeMeta(path);
     if (meta) {
       setActiveNav(meta.nav);
       updatePageTitle(meta.title);
     }
+    closeSidebar();
+    event.detail.target.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   refreshDynamicUI();

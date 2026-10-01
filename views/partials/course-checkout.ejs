@@ -1,0 +1,26 @@
+<section class="checkout-page">
+  <a class="back-link" href="/certifications">← All certifications</a>
+  <div class="page-head">
+    <h2 class="page-head-title">Enrol in this course</h2>
+    <p class="page-head-text">Complete payment to take the assessment. Course materials are free to study before you pay.</p>
+  </div>
+  <div class="enrollment-layout">
+    <div class="card">
+      <span class="badge badge-neutral"><%= checkoutCourse.code %></span>
+      <h3 class="enrollment-title"><%= checkoutCourse.name %></h3>
+      <dl class="fee-breakdown">
+        <div><dt>Course and assessment</dt><dd><%= formatNaira(checkoutCourse.priceKobo) %></dd></div>
+        <div><dt>Certificate after passing</dt><dd><%= checkoutCourse.certificatePriceKobo > 0 ? formatNaira(checkoutCourse.certificatePriceKobo) + ' separately' : 'No additional fee' %></dd></div>
+      </dl>
+      <p class="text-sm text-surface-500">Payment covers one assessment attempt. The timer starts only when you choose to begin.</p>
+      <a class="back-link mt-4" href="/materials?courseId=<%= checkoutCourse.id %>">Study course materials first →</a>
+    </div>
+    <form class="card space-y-5" method="post" action="/checkout">
+      <h3 class="card-title">Payment details</h3>
+      <input type="hidden" name="courseId" value="<%= checkoutCourse.id %>">
+      <div><label class="premium-label" for="checkout-email">Email address</label><input class="premium-input w-full" id="checkout-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"><p class="form-hint">Use an email address you can access for your payment receipt.</p></div>
+      <button class="btn btn-primary w-full" type="submit">Pay <%= formatNaira(checkoutCourse.priceKobo) %></button>
+      <p class="form-hint">You’ll be redirected to Paystack to complete payment, then returned to your course.</p>
+    </form>
+  </div>
+</section>
