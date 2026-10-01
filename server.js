@@ -25,17 +25,57 @@ app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
 
 app.disable("x-powered-by");
+
+function requestOriginCandidates(req) {
+  const origins = new Set();
+  const hosts = new Set();
+  const protos = new Set();
+
+  if (req.get("host")) hosts.add(req.get("host"));
+  const forwardedHost = req.get("x-forwarded-host");
+  if (forwardedHost) hosts.add(forwardedHost.split(",")[0].trim());
+
+  protos.add(req.protocol);
+  const forwardedProto = req.get("x-forwarded-proto");
+  if (forwardedProto) protos.add(forwardedProto.split(",")[0].trim());
+
+  for (const proto of protos) {
+    for (const host of hosts) {
+      if (host) origins.add(`${proto}://${host}`);
+    }
+  }
+
+  if (APP_BASE_URL) {
+    try { origins.add(new URL(APP_BASE_URL).origin); } catch (_) { }
+  }
+
+  return origins;
+}
+
+function isSameOriginRequest(req) {
+  const site = req.get("sec-fetch-site");
+  if (site === "same-origin" || site === "none") return true;
+  if (site === "cross-site") return false;
+
+  const allowed = requestOriginCandidates(req);
+  let sawParseableSource = false;
+
+  for (const raw of [req.get("origin"), req.get("referer")]) {
+    if (!raw || raw === "null") continue;
+    try {
+      sawParseableSource = true;
+      if (allowed.has(new URL(raw).origin)) return true;
+    } catch (_) { /* malformed header -> treat as opaque */ }
+  }
+
+  // Opaque or absent origin (e.g. embedded webviews): fall back to SameSite cookies.
+  return !sawParseableSource;
+}
 app.use((req, res, next) => {
   res.set({ "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer", "Cache-Control": "no-store" });
   if (["GET", "HEAD", "OPTIONS"].includes(req.method) || req.path === "/paystack/webhook") return next();
-  // Fail closed when browser origin evidence is absent, including login requests.
-  const source = req.get("origin") || req.get("referer");
-  try {
-    if (!source || new URL(source).origin !== new URL(APP_BASE_URL || `${req.protocol}://${req.get("host")}`).origin) {
-      return res.status(403).send("Same-origin request required.");
-    }
-  } catch { return res.status(403).send("Invalid request origin."); }
-  next();
+  if (isSameOriginRequest(req)) return next();
+  return res.status(403).send("Same-origin request required.");
 });
 app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 500 }));
 app.use(
@@ -1232,13 +1272,6 @@ app.post("/checkout", async (req, res, next) => {
       });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return renderFullPage(res, {
-        quizErrorContent: true,
-        quizErrorMessage: "A valid email address is required to process payment."
-      });
-    }
-
     const course = await prisma.course.findUnique({
       where: { id: courseId },
       include: { questions: true }
@@ -1275,6 +1308,13 @@ app.post("/checkout", async (req, res, next) => {
       });
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return renderFullPage(res, {
+        quizErrorContent: true,
+        quizErrorMessage: "A valid email address is required to process payment."
+      });
+    }
+
     if (!PAYSTACK_SECRET_KEY) {
       return renderFullPage(res, {
         quizErrorContent: true,
@@ -1286,8 +1326,8 @@ app.post("/checkout", async (req, res, next) => {
     const payment = await prisma.payment.create({
       data: {
         reference,
-        candidateName: "",
-        institution: "",
+        candidateName: name,
+        institution,
         email,
         courseId: course.id,
         amount: course.priceKobo,

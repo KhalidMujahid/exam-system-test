@@ -1,9 +1,8 @@
-<% courses = courses.filter(course => !course.requiresPayment); %>
 <section class="space-y-8 animate-fade-in">
   <div class="page-head">
-
-    <h2 class="page-head-title">Start a free assessment</h2>
-    <p class="page-head-text">Choose a free course and enter your details to begin. Paid courses are available on the Certifications page.</p>
+    <span class="page-head-eyebrow">Candidate Workflow</span>
+    <h2 class="page-head-title">Registration &amp; Track Selection</h2>
+    <p class="page-head-text">Enter your details and choose a track. Standard assessments are free and start immediately; paid cyber security tracks require a verified payment before the timed session unlocks.</p>
   </div>
 
   <form id="registration-form" method="POST" action="/checkout" class="space-y-7">
