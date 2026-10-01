@@ -65,10 +65,9 @@ function isSameOriginRequest(req) {
     try {
       sawParseableSource = true;
       if (allowed.has(new URL(raw).origin)) return true;
-    } catch (_) { /* malformed header -> treat as opaque */ }
+    } catch (_) {  }
   }
 
-  // Opaque or absent origin (e.g. embedded webviews): fall back to SameSite cookies.
   return !sawParseableSource;
 }
 app.use((req, res, next) => {
@@ -266,7 +265,7 @@ async function renderFullPage(res, extra = {}) {
 }
 
 async function createQuizAttempt(course, name, institution, db = prisma) {
-  const selectedQuestions = [...course.questions].sort(() => Math.random() - 0.5).slice(0, 20);
+  const selectedQuestions = [...course.questions].sort(() => Math.random() - 0.5);
   const durationMinutes = toSafeInt(await getSetting("examDurationMinutes", "30", db), 30);
 
   const attempt = await db.attempt.create({
@@ -437,7 +436,7 @@ app.post("/courses/access/:reference/start", async (req, res, next) => {
     if (!payment) return res.status(403).send("Verified course access is required.");
     const name = typeof req.body.name === "string" ? req.body.name.trim().slice(0, 200) : "";
     const institution = typeof req.body.institution === "string" ? req.body.institution.trim().slice(0, 200) : "";
-    if (!payment.attemptId && (!name || !institution || payment.course.questions.length < 20)) {
+    if (!payment.attemptId && (!name || !institution || payment.course.questions.length < 1)) {
       const materials = await prisma.courseMaterial.findMany({ where: { courseId: payment.courseId }, orderBy: { createdAt: "desc" } });
       return renderFullPage(res, { courseAccessContent: true, enrollment: { ...payment, candidateName: name, institution }, courseMaterials: materials, registrationError: !name || !institution ? "Please enter your full name and institution." : "The assessment is not ready yet. Your payment and course access are saved; please contact the academy." });
     }
@@ -1281,10 +1280,10 @@ app.post("/checkout", async (req, res, next) => {
       return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Selected course was not found." });
     }
 
-    if (course.questions.length < 20) {
+    if (course.questions.length < 1) {
       return renderFullPage(res, {
         quizErrorContent: true,
-        quizErrorMessage: `This track needs at least 20 questions. It currently has ${course.questions.length}.`
+        quizErrorMessage: "This track has no questions yet. Please contact the administrator."
       });
     }
 

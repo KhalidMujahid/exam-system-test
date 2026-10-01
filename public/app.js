@@ -130,6 +130,9 @@ function syncPortalSubmit() {
     label.textContent = paid ? "Proceed to Payment" : "Start Test";
     if (icon) icon.innerHTML = paid ? ICON_CARD : ICON_PLAY;
     button.dataset.mode = paid ? "payment" : "free";
+
+    const countEl = document.getElementById("portal-question-count");
+    if (countEl) countEl.textContent = selected ? (selected.dataset.questionCount || "0") : "0";
   };
 
   document.querySelectorAll('input[name="courseId"]').forEach((radio) => {
@@ -162,6 +165,69 @@ function updateQuizProgress() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Quiz submit confirmation modal                                     */
+/* ------------------------------------------------------------------ */
+let autoSubmitQuiz = false;
+let quizConfirmCallback = null;
+
+function closeQuizConfirm() {
+  const modal = document.getElementById("quiz-confirm-modal");
+  if (modal) modal.classList.add("hidden");
+  quizConfirmCallback = null;
+}
+
+function openQuizConfirm(onConfirm) {
+  const modal = document.getElementById("quiz-confirm-modal");
+  if (!modal) {
+    if (onConfirm) onConfirm();
+    return;
+  }
+  quizConfirmCallback = onConfirm;
+  modal.classList.remove("hidden");
+  const yes = document.getElementById("quiz-confirm-yes");
+  if (yes) yes.focus();
+}
+
+function bindQuizConfirm() {
+  const modal = document.getElementById("quiz-confirm-modal");
+  if (!modal || modal.dataset.bound === "1") return;
+  modal.dataset.bound = "1";
+
+  const yes = document.getElementById("quiz-confirm-yes");
+  const no = document.getElementById("quiz-confirm-no");
+
+  if (yes) {
+    yes.addEventListener("click", () => {
+      const callback = quizConfirmCallback;
+      closeQuizConfirm();
+      if (callback) callback();
+    });
+  }
+  if (no) no.addEventListener("click", closeQuizConfirm);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeQuizConfirm();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) closeQuizConfirm();
+  });
+}
+
+document.addEventListener("htmx:confirm", (event) => {
+  const form = document.getElementById("quiz-form");
+  if (!form || !event.detail || event.detail.elt !== form) return;
+
+  event.preventDefault();
+
+  if (autoSubmitQuiz) {
+    autoSubmitQuiz = false;
+    event.detail.issueRequest(true);
+    return;
+  }
+
+  openQuizConfirm(() => event.detail.issueRequest(true));
+});
+
+/* ------------------------------------------------------------------ */
 /* Exam timer                                                         */
 /* ------------------------------------------------------------------ */
 function bindTimer() {
@@ -191,6 +257,7 @@ function bindTimer() {
 
     if (seconds <= 0) {
       clearInterval(timerHandle);
+      autoSubmitQuiz = true;
       form.requestSubmit();
     }
   };
@@ -230,6 +297,7 @@ function refreshDynamicUI() {
   bindTimer();
   updateQuizProgress();
   syncPortalSubmit();
+  bindQuizConfirm();
   initAdminNav();
 
   const outcomeBadge = document.getElementById("outcome-badge");

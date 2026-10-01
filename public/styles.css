@@ -827,6 +827,47 @@ textarea.field { line-height: 1.55; }
 }
 
 /* --------------------------------------------------------------------------
+   Confirmation modal
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 13, 26, 0.55);
+  backdrop-filter: blur(3px);
+}
+.modal-backdrop.hidden { display: none; }
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  box-shadow: var(--shadow-elevated);
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  width: 52px;
+  border-radius: 14px;
+  background: var(--warning-50);
+  color: var(--warning-700);
+  margin-bottom: 14px;
+}
+.modal-title { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--surface-900); }
+.modal-text { margin: 8px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--surface-500); }
+.modal-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.modal-actions .premium-btn { flex: 1 1 0; }
+
+/* --------------------------------------------------------------------------
    Animations
    -------------------------------------------------------------------------- */
 @keyframes pulseSoft { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
