@@ -23,12 +23,13 @@ function createFixture() {
   const prisma = {
     $connect:async()=>{},
     $queryRaw:async()=>[],
+    $executeRaw:async()=>1,
     $transaction:fn=> { const task=lock.then(()=>fn(prisma)); lock=task.catch(()=>{}); return task; },
     course:{findMany:async({where}={})=>courses.filter(c=>!where || c.requiresPayment===where.requiresPayment).map(c=>course(c.id)),findUnique:async({where})=>course(where.id)},
     setting:{findUnique:async({where})=>({value:where.key==='examDurationMinutes'?'30':'128'})},
     courseMaterial:{findMany:async({where,skip=0,take=999})=>filtered(where).slice(skip,skip+take).map(m=>({...m,course:course(m.courseId)})),count:async({where})=>filtered(where).length,findUnique:async({where})=>{const m=materials.find(m=>m.id===where.id);return m&&{...m,course:course(m.courseId)};},update:async({where,data})=>Object.assign(materials.find(m=>m.id===where.id),data)},
     payment:{create:async({data})=>{const p={id:'payment-'+payments.length,purpose:'ASSESSMENT',attemptId:null,...data};payments.push(p);return withCourse(p);},findUnique:async({where})=>withCourse(payments.find(p=>where.reference?p.reference===where.reference:p.id===where.id)),update:async({where,data})=>Object.assign(payments.find(p=>p.id===where.id),data),updateMany:async({where,data})=>{const p=payments.find(p=>p.id===where.id);if(p&&p.status!=='SUCCESS')Object.assign(p,data);return {count:1};}},
-    attempt:{create:async({data})=>{const a={id:'attempt-'+attempts.length,...data};attempts.push(a);return a;},findUnique:async({where})=>{const a=attempts.find(a=>a.id===where.id);return a&&{...a,course:course(a.courseId)};}},
+    attempt:{create:async({data})=>{const a={id:'attempt-'+attempts.length,...data,...(state.expired ? {startedAt:new Date(Date.now()-3600000)} : {})};attempts.push(a);return a;},findUnique:async({where})=>{const a=attempts.find(a=>a.id===where.id);return a&&{...a,course:course(a.courseId),questionLinks:links.filter(l=>l.attemptId===a.id).map(l=>({...l,question:courses.flatMap(c=>c.questions).find(q=>q.id===l.questionId)}))};},update:async({where,data})=>{const a=attempts.find(a=>a.id===where.id);Object.assign(a,data);return {...a,course:course(a.courseId)};}},
     attemptQuestion:{createMany:async({data})=>links.push(...data),findMany:async({where})=>links.filter(l=>l.attemptId===where.attemptId).map(l=>({...l,question:courses.flatMap(c=>c.questions).find(q=>q.id===l.questionId)}))}
   };
   const state={courses,materials,payments,attempts,verificationStatus:'success',amountOverride:null,secret:'isolated-test-secret'};
@@ -40,7 +41,7 @@ function createFixture() {
   const customRequire=id=>id==='@prisma/client'?{PrismaClient:function(){return prisma;}}:id==='dotenv'?{config(){}}:require(id);
   customRequire.resolve=require.resolve;
   const source=fs.readFileSync(path.join(root,'server.js'),'utf8').replace(/main\(\)\.catch\([\s\S]*$/,'globalThis.previewApp=app;');
-  const context={require:customRequire,__dirname:root,console,process:{env:{PAYSTACK_SECRET_KEY:state.secret}},Buffer,fetch:fakeFetch,URL};
+  const context={require:customRequire,__dirname:root,console,process:{env:{PAYSTACK_SECRET_KEY:state.secret,APP_BASE_URL:'http://localhost:3000'}},Buffer,fetch:fakeFetch,URL};
   vm.runInNewContext(source,context);
   return {app:context.previewApp,state,adminToken:context.createAdminSession()};
 }

@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_COOKIE = "cca_admin_auth";
 const adminSessions = new Map();
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
-const DEFAULT_ADMIN_PASSWORD = "admin123";
+const ATTEMPT_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_INITIAL_PASSWORD;
 const PASS_THRESHOLD = 80;
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 const PAYSTACK_SECRET_KEY = (process.env.PAYSTACK_SECRET_KEY || "").trim();
@@ -23,7 +24,20 @@ const APP_BASE_URL = (process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "")
 app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
 
-app.use(express.urlencoded({ extended: true }));
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.set({ "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer", "Cache-Control": "no-store" });
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method) || req.path === "/paystack/webhook") return next();
+  // Fail closed when browser origin evidence is absent, including login requests.
+  const source = req.get("origin") || req.get("referer");
+  try {
+    if (!source || new URL(source).origin !== new URL(APP_BASE_URL || `${req.protocol}://${req.get("host")}`).origin) {
+      return res.status(403).send("Same-origin request required.");
+    }
+  } catch { return res.status(403).send("Invalid request origin."); }
+  next();
+});
+app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 500 }));
 app.use(
   express.json({
     verify: (req, res, buf) => {
@@ -61,7 +75,36 @@ app.locals.formatNaira = function (kobo) {
 };
 
 function baseUrlFor(req) {
-  return APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
+  if (!APP_BASE_URL) throw new Error("APP_BASE_URL must be configured for payments.");
+  return new URL(APP_BASE_URL).origin;
+}
+
+function grantAttemptAccess(req, res, attempt, durationMinutes) {
+  const deadline = new Date(attempt.startedAt).getTime() + durationMinutes * 60000;
+  const payload = String(deadline);
+  const signature = crypto.createHmac("sha256", ATTEMPT_SECRET).update(attempt.id + ":" + payload).digest("hex");
+  res.cookie("cca_attempt_" + attempt.id, payload + "." + signature, {
+    httpOnly: true, sameSite: "lax", secure: req.secure || APP_BASE_URL.startsWith("https://"), maxAge: 24 * 60 * 60 * 1000
+  });
+}
+
+function attemptDeadline(req) {
+  const value = req.cookies["cca_attempt_" + req.params.id];
+  if (typeof value !== "string" || !/^\d{13}\.[a-f0-9]{64}$/.test(value)) return null;
+  const [payload, signature] = value.split(".");
+  const expected = crypto.createHmac("sha256", ATTEMPT_SECRET).update(req.params.id + ":" + payload).digest();
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), expected) ? Number(payload) : null;
+}
+
+let loginWindow = { until: 0, count: 0 };
+function limitLogin(req, res, next) {
+  const now = Date.now();
+  if (now >= loginWindow.until) loginWindow = { until: now + 15 * 60000, count: 0 };
+  if (++loginWindow.count > 20) {
+    res.set("Retry-After", String(Math.ceil((loginWindow.until - now) / 1000)));
+    return res.status(429).send("Too many login attempts. Please try again later.");
+  }
+  next();
 }
 
 async function paystackRequest(pathname, options = {}) {
@@ -122,6 +165,7 @@ async function ensureSeedData() {
 
   const defaultDuration = process.env.DEFAULT_EXAM_DURATION_MINUTES || "30";
   const defaultPriceKobo = toKobo(process.env.DEFAULT_COURSE_PRICE_NAIRA || "20000");
+  if (!DEFAULT_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD.length < 12 || Buffer.byteLength(DEFAULT_ADMIN_PASSWORD) > 72) throw new Error("Set ADMIN_INITIAL_PASSWORD to 12 or more characters (maximum 72 UTF-8 bytes).");
   const defaultPasswordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
 
   const tracks = [
@@ -368,6 +412,7 @@ app.post("/courses/access/:reference/start", async (req, res, next) => {
     });
     const resumed = await resumePaymentAttempt({ ...payment, attemptId });
     if (!resumed) return res.status(404).send("Assessment not found.");
+    grantAttemptAccess(req, res, resumed.attempt, resumed.durationMinutes);
     if (resumed.attempt.status === "COMPLETED") return renderFullPage(res, { resultContent: true, resultAttempt: resumed.attempt });
     await renderFullPage(res, { quizContent: true, quizAttempt: resumed.attempt, quizCourse: resumed.course, quizQuestions: resumed.questions, quizDurationMinutes: resumed.durationMinutes });
   } catch (err) { next(err); }
@@ -694,7 +739,7 @@ app.get("/payment/certificate/callback", async (req, res, next) => {
       txn &&
       txn.status === "success" &&
       Number(txn.amount) === payment.amount &&
-      txn.currency === payment.currency
+      txn.currency === payment.currency && txn.reference === reference
     );
 
     if (!verified) {
@@ -888,11 +933,11 @@ app.get("/admin", async (req, res, next) => {
   }
 });
 
-app.post("/admin/login", async (req, res, next) => {
+app.post("/admin/login", limitLogin, async (req, res, next) => {
   try {
-    const password = (req.body.password || "").trim();
+    const password = typeof req.body.password === "string" ? req.body.password : "";
     const storedHash = await getSetting("adminPasswordHash");
-    const ok = storedHash ? await bcrypt.compare(password, storedHash) : false;
+    const ok = storedHash && password !== "admin123" && Buffer.byteLength(password) <= 72 ? await bcrypt.compare(password, storedHash) : false;
     const isHtmx = req.headers["hx-request"] === "true";
 
     if (!ok) {
@@ -936,10 +981,10 @@ app.post("/admin/logout", async (req, res) => {
 
 app.post("/admin/password", requireAdmin, async (req, res, next) => {
   try {
-    const nextPassword = (req.body.password || "").trim();
-    if (nextPassword.length < 4) {
+    const nextPassword = typeof req.body.password === "string" ? req.body.password : "";
+    if (nextPassword.length < 12 || Buffer.byteLength(nextPassword) > 72) {
       return res.render("partials/admin-alert", {
-        message: "Password must be at least 4 characters long."
+        message: "Password must be at least 12 characters and at most 72 UTF-8 bytes."
       });
     }
 
@@ -1220,6 +1265,7 @@ app.post("/checkout", async (req, res, next) => {
     if (!course.requiresPayment) {
       if (!name || !institution) return renderFullPage(res, { quizErrorContent: true, quizErrorMessage: "Your full name and institution are required." });
       const { attempt, questions, durationMinutes } = await createQuizAttempt(course, name, institution);
+      grantAttemptAccess(req, res, attempt, durationMinutes);
       return renderFullPage(res, {
         quizContent: true,
         quizAttempt: attempt,
@@ -1471,7 +1517,9 @@ app.get("/materials/open/:id", async (req, res, next) => {
     res.set("Cache-Control", "private, no-store");
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id }, include: { course: true } });
     if (!material) return res.status(404).send("Material not found.");
-    res.redirect(material.url);
+    const url = new URL(material.url);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return res.status(400).send("Invalid material link.");
+    res.redirect(url.href);
   } catch (err) {
     next(err);
   }
@@ -1502,8 +1550,12 @@ app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => 
 
 app.post("/attempts/:id/submit", async (req, res, next) => {
   try {
+    const deadline = attemptDeadline(req);
+    if (!deadline) return res.status(403).send("Assessment access required.");
     const attemptId = req.params.id;
-    const attempt = await prisma.attempt.findUnique({
+    const result = await prisma.$transaction(async (db) => {
+    await db.$queryRaw`SELECT "id" FROM "Attempt" WHERE "id" = ${attemptId} FOR UPDATE`;
+    const attempt = await db.attempt.findUnique({
       where: { id: attemptId },
       include: {
         course: true,
@@ -1515,12 +1567,12 @@ app.post("/attempts/:id/submit", async (req, res, next) => {
     });
 
     if (!attempt) {
-      return res.render("partials/quiz-error", { message: "Attempt not found." });
+      return null;
     }
 
     const alreadyFinished = attempt.status === "COMPLETED";
     if (alreadyFinished) {
-      return res.render("partials/result-view", { attempt });
+      return attempt;
     }
 
     const answers = req.body.answers || {};
@@ -1535,7 +1587,9 @@ app.post("/attempts/:id/submit", async (req, res, next) => {
     );
     let rawScore = 0;
     const responses = attempt.questionLinks.map((link) => {
-      const selected = answers[String(link.questionId)] || flatAnswers[String(link.questionId)] || null;
+      const submitted = answers[String(link.questionId)] || flatAnswers[String(link.questionId)];
+      // A short grace period permits the browser timer's automatic submission.
+      const selected = Date.now() <= deadline + 10000 && typeof submitted === "string" ? submitted : null;
       const correct = link.question.correctAnswer;
       const isCorrect = selected === correct;
       if (isCorrect) rawScore += 1;
@@ -1550,7 +1604,7 @@ app.post("/attempts/:id/submit", async (req, res, next) => {
     const passed = percentage >= PASS_THRESHOLD;
     const endedAt = new Date();
 
-    const updated = await prisma.attempt.update({
+    const updated = await db.attempt.update({
       where: { id: attempt.id },
       data: {
         status: "COMPLETED",
@@ -1558,10 +1612,7 @@ app.post("/attempts/:id/submit", async (req, res, next) => {
         rawScore,
         percentage,
         passed,
-        checksum: `CCA-SYS-TRK-${Buffer.from(`${attempt.candidateName}|${rawScore}|${endedAt.getTime()}`)
-          .toString("base64")
-          .substring(0, 24)
-          .toUpperCase()}`,
+        checksum: "CCA-SYS-TRK-" + crypto.randomBytes(24).toString("hex").toUpperCase(),
         responses: {
           createMany: {
             data: responses
@@ -1574,10 +1625,11 @@ app.post("/attempts/:id/submit", async (req, res, next) => {
       }
     });
 
-    const counter = toSafeInt(await getSetting("attemptCounter", "0"), 0) + 1;
-    await setSetting("attemptCounter", String(counter));
-
-    res.render("partials/result-view", { attempt: updated });
+    await db.$executeRaw`INSERT INTO "Setting" ("key", "value", "createdAt", "updatedAt") VALUES ('attemptCounter', '1', NOW(), NOW()) ON CONFLICT ("key") DO UPDATE SET "value" = (("Setting"."value")::integer + 1)::text, "updatedAt" = NOW()`;
+    return updated;
+    });
+    if (!result) return res.status(404).render("partials/quiz-error", { message: "Attempt not found." });
+    res.render("partials/result-view", { attempt: result });
   } catch (err) {
     next(err);
   }

@@ -6,7 +6,7 @@ const {createFixture}=require('./flow-fixture.cjs');
  const server=app.listen(0,'127.0.0.1'); await new Promise(resolve=>server.once('listening',resolve));
  const base='http://127.0.0.1:'+server.address().port;
  const request=(url,options={})=>fetch(base+url,{redirect:'manual',...options});
- const post=(url,data,cookie='')=>request(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',cookie},body:new URLSearchParams(data)});
+ const post=(url,data,cookie='')=>request(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',origin:'http://localhost:3000',cookie},body:new URLSearchParams(data)});
  try {
   const portal=await request('/portal').then(r=>r.text()); assert.ok(!portal.includes('value="course-1"')); assert.ok(portal.includes('value="course-2"'));
   const certs=await request('/certifications').then(r=>r.text());assert.ok(certs.includes('/certifications/course-1/checkout'));assert.ok(!certs.includes('/certifications/course-2/checkout'));
