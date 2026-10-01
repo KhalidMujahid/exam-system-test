@@ -108,6 +108,35 @@ function initAdminNav() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Portal submit button (pay vs start)                                */
+/* ------------------------------------------------------------------ */
+const ICON_CARD = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>';
+const ICON_PLAY = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+
+function syncPortalSubmit() {
+  const button = document.getElementById("portal-submit");
+  const label = document.getElementById("portal-submit-label");
+  const icon = document.getElementById("portal-submit-icon");
+  if (!button || !label) return;
+
+  const apply = () => {
+    const selected = document.querySelector('input[name="courseId"]:checked');
+    const paid = selected ? selected.dataset.requiresPayment === "true" : true;
+    label.textContent = paid ? "Proceed to Payment" : "Start Test";
+    if (icon) icon.innerHTML = paid ? ICON_CARD : ICON_PLAY;
+    button.dataset.mode = paid ? "payment" : "free";
+  };
+
+  document.querySelectorAll('input[name="courseId"]').forEach((radio) => {
+    if (radio.dataset.bound === "1") return;
+    radio.dataset.bound = "1";
+    radio.addEventListener("change", apply);
+  });
+
+  apply();
+}
+
+/* ------------------------------------------------------------------ */
 /* Quiz progress                                                      */
 /* ------------------------------------------------------------------ */
 function updateQuizProgress() {
@@ -193,6 +222,7 @@ function refreshDynamicUI() {
   }
   bindTimer();
   updateQuizProgress();
+  syncPortalSubmit();
   initAdminNav();
 
   const outcomeBadge = document.getElementById("outcome-badge");

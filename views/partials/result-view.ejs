@@ -1,83 +1,123 @@
+<%
+  var passed = attempt.passed;
+  var pct = Number(attempt.percentage) || 0;
+  var ringColor = passed ? '#22c55e' : '#ef4444';
+%>
 <section class="space-y-6 animate-fade-in">
-  <div class="flex flex-wrap items-center justify-end gap-3 no-print">
-    <button class="premium-btn premium-btn-primary" onclick="window.print()">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-      Export PDF Report
-    </button>
-    <button class="premium-btn premium-btn-ghost" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-      New Attempt
-    </button>
+  <div class="flex flex-wrap items-end justify-between gap-3 no-print">
+    <div>
+      <span class="page-head-eyebrow">Assessment Result</span>
+      <h2 class="page-head-title">Result Report</h2>
+      <p class="page-head-text">A summary of this assessment session. Keep your result code to generate a certificate if you passed.</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button class="premium-btn premium-btn-primary sm:w-auto" onclick="window.print()">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        Export PDF
+      </button>
+      <button class="premium-btn premium-btn-ghost sm:w-auto" hx-get="/portal" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        New Attempt
+      </button>
+    </div>
   </div>
 
-  <div class="mx-auto max-w-3xl">
-    <div class="relative overflow-hidden rounded-2xl border-8 border-double border-surface-900 bg-white p-8 shadow-2xl sm:p-12 print:border-4">
-      <div class="absolute inset-0 opacity-[0.02] pointer-events-none">
-        <div class="absolute inset-0" style="background: repeating-linear-gradient(45deg, transparent, transparent 8px, #000 8px, #000 9px)"></div>
+  <div class="grid gap-5 lg:grid-cols-[1.15fr_1fr]">
+    <div class="card">
+      <div class="card-header">
+        <div class="min-w-0">
+          <p class="text-xs font-bold uppercase tracking-widest text-brand-600"><%= attempt.course.code %></p>
+          <h3 class="card-title truncate"><%= attempt.course.name %></h3>
+        </div>
+        <span id="outcome-badge" class="badge <%= passed ? 'badge-success' : 'badge-danger' %>"><%= passed ? "PASS" : "FAIL" %></span>
       </div>
 
-      <div class="relative text-center">
-        <div class="mb-5 inline-flex items-center gap-2 rounded-full bg-surface-100 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-surface-600">
-          Official Assessment Report
-        </div>
-
-        <div class="mb-6">
-          <span class="<%= attempt.passed ? 'inline-block rounded-xl bg-emerald-50 px-8 py-3 text-2xl font-black uppercase tracking-widest text-emerald-700 border-2 border-emerald-500 shadow-lg' : 'inline-block rounded-xl bg-rose-50 px-8 py-3 text-2xl font-black uppercase tracking-widest text-rose-700 border-2 border-rose-500' %>">
-            STATUS: <%= attempt.passed ? "PASS" : "FAIL" %>
-          </span>
-        </div>
-
-        <div class="flex items-center justify-center gap-3 mb-2">
-          <img src="/logo.jpeg" alt="CyberCops Academy" class="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-200 shadow-md">
-          <h2 class="text-3xl font-bold text-surface-900 sm:text-4xl tracking-tight">CyberCops Academy</h2>
-        </div>
-        <p class="text-sm text-surface-500 font-medium">Validation Standard Certification</p>
-
-        <div class="mx-auto mt-8 max-w-md">
-          <table class="w-full text-left text-sm">
-            <tbody class="divide-y divide-surface-100">
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500 w-[40%]">Participant</th>
-                <td class="py-3 text-right font-semibold text-surface-900"><%= attempt.candidateName %></td>
-              </tr>
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500">Institution</th>
-                <td class="py-3 text-right text-surface-700"><%= attempt.institution %></td>
-              </tr>
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500">Assessment Track</th>
-                <td class="py-3 text-right text-surface-700 font-medium"><%= attempt.course.code %>: <%= attempt.course.name %></td>
-              </tr>
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500">Score</th>
-                <td class="py-3 text-right font-bold text-surface-900 text-base"><%= attempt.rawScore %> / <%= attempt.totalQuestions %></td>
-              </tr>
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500">Percentage</th>
-                <td class="py-3 text-right font-bold text-surface-900 text-lg"><%= Number(attempt.percentage).toFixed(1) %>%</td>
-              </tr>
-              <tr>
-                <th class="py-3 pr-4 text-xs font-bold uppercase tracking-wider text-surface-500">Timeline</th>
-                <td class="py-3 text-right text-xs text-surface-500 leading-relaxed"><%= attempt.startedAt.toLocaleString("en-GB") %><br><%= attempt.endedAt ? attempt.endedAt.toLocaleString("en-GB") : "" %></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="mx-auto mt-8 max-w-md rounded-xl border border-surface-200 bg-surface-50 p-5 text-left">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <svg class="h-4 w-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-              <p class="text-xs font-bold uppercase tracking-wider text-surface-500">Authentication Signature</p>
-            </div>
-            <button onclick="copySignature()" class="premium-btn premium-btn-ghost text-xs px-3 py-1.5" title="Copy to clipboard">
-              <svg id="copy-icon" class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-              <span id="copy-label">Copy</span>
-            </button>
+      <div class="flex flex-col items-center gap-6 sm:flex-row">
+        <div class="score-ring" style="background: conic-gradient(<%= ringColor %> <%= pct %>%, #e2e8f0 0);">
+          <div class="text-center">
+            <span class="score-ring-value"><%= pct.toFixed(1) %></span>
+            <span class="score-ring-label">Percent</span>
           </div>
-          <p id="signature-text" class="break-all font-mono text-xs text-surface-600 bg-white rounded-lg p-3 border border-surface-100 select-all"><%= attempt.checksum || "" %></p>
-          <div class="mt-3 flex items-center justify-between">
-            <p class="text-xs italic text-surface-400">Verified at runtime. Content integrity enforced server-side.</p>
+        </div>
+
+        <div class="grid w-full flex-1 grid-cols-2 gap-3">
+          <div class="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-surface-400">Raw score</p>
+            <p class="mt-1 text-xl font-bold text-surface-900"><%= attempt.rawScore %> / <%= attempt.totalQuestions %></p>
+          </div>
+          <div class="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-surface-400">Outcome</p>
+            <p class="mt-1 text-xl font-bold <%= passed ? 'text-accent-600' : 'text-rose-600' %>"><%= passed ? "Passed" : "Failed" %></p>
+          </div>
+          <div class="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-surface-400">Questions</p>
+            <p class="mt-1 text-xl font-bold text-surface-900"><%= attempt.totalQuestions %></p>
+          </div>
+          <div class="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-surface-400">Threshold</p>
+            <p class="mt-1 text-xl font-bold text-surface-900">80%</p>
+          </div>
+        </div>
+      </div>
+
+      <% if (!passed) { %>
+        <div class="premium-alert premium-alert-error mt-5">
+          <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>The 80% threshold was not met, so a certificate is not available for this result.</span>
+        </div>
+      <% } else { %>
+        <div class="premium-alert premium-alert-success mt-5">
+          <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>You passed. Use the result code below to generate your certificate.</span>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Candidate &amp; session</h3>
+          <p class="card-subtitle">Session details recorded on the platform.</p>
+        </div>
+      </div>
+
+      <div class="grid gap-1">
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Participant</span>
+          <span class="text-sm font-semibold text-surface-900 text-right"><%= attempt.candidateName %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Institution</span>
+          <span class="text-sm text-surface-700 text-right"><%= attempt.institution %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Started</span>
+          <span class="text-xs text-surface-500"><%= attempt.startedAt.toLocaleString("en-GB") %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Submitted</span>
+          <span class="text-xs text-surface-500"><%= attempt.endedAt ? attempt.endedAt.toLocaleString("en-GB") : "—" %></span>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-4">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <div class="flex items-center gap-2">
+            <svg class="h-4 w-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <p class="text-xs font-bold uppercase tracking-wider text-surface-500">Result code</p>
+          </div>
+          <button onclick="copySignature()" class="premium-btn premium-btn-ghost text-xs px-3 py-1.5" title="Copy to clipboard">
+            <svg id="copy-icon" class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span id="copy-label">Copy</span>
+          </button>
+        </div>
+        <p id="signature-text" class="break-all font-mono text-xs text-surface-600 bg-white rounded-lg p-3 border border-surface-100 select-all"><%= attempt.checksum || "" %></p>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-xs italic text-surface-400">Content integrity enforced server-side.</p>
+          <div class="flex gap-3">
+            <% if (passed) { %>
+              <a href="/certificates/generate" hx-get="/certificates/generate" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="text-xs font-semibold text-brand-600 hover:text-brand-700 underline transition">Generate Certificate</a>
+            <% } %>
             <a href="/verify" target="_blank" class="text-xs font-semibold text-brand-600 hover:text-brand-700 underline transition">Verify Online</a>
           </div>
         </div>

@@ -22,8 +22,10 @@
       navSection = "portal"; pageTitle = "Assessment Session"; pageSubtitle = "Timed examination in progress";
     } else if (typeof quizErrorContent !== 'undefined' && quizErrorContent) {
       navSection = "portal"; pageTitle = "Notice"; pageSubtitle = "Something needs your attention";
-    } else if (typeof comingSoonContent !== 'undefined' && comingSoonContent) {
-      navSection = "home"; pageTitle = "Coming Soon"; pageSubtitle = "This feature is on the way";
+    } else if (typeof certificateGenerateContent !== 'undefined' && certificateGenerateContent) {
+      navSection = "certifications"; pageTitle = "Generate Certificate"; pageSubtitle = "Generate a certificate from a passed result";
+    } else if (typeof certificateViewContent !== 'undefined' && certificateViewContent) {
+      navSection = "certifications"; pageTitle = "Certificate"; pageSubtitle = "Your official CyberCops Academy certificate";
     }
 
     function navClass(section) { return "sidebar-link" + (navSection === section ? " is-active" : ""); }
@@ -161,8 +163,10 @@
           <%- include("partials/quiz-view", { attempt: quizAttempt, course: quizCourse, questions: quizQuestions, durationMinutes: quizDurationMinutes }) %>
         <% } else if (typeof quizErrorContent !== 'undefined' && quizErrorContent) { %>
           <%- include("partials/quiz-error", { message: quizErrorMessage }) %>
-        <% } else if (typeof comingSoonContent !== 'undefined' && comingSoonContent) { %>
-          <%- include("partials/coming-soon", { title: comingSoonTitle, message: comingSoonMessage }) %>
+        <% } else if (typeof certificateGenerateContent !== 'undefined' && certificateGenerateContent) { %>
+          <%- include("partials/certificate-generate", { result: certificateResult, checksum: certificateChecksum, attempt: certificateAttempt, message: certificateMessage }) %>
+        <% } else if (typeof certificateViewContent !== 'undefined' && certificateViewContent) { %>
+          <%- include("partials/certificate-view", { attempt: certificateAttempt }) %>
         <% } else { %>
           <%- include("partials/home", { courses: (typeof courses !== 'undefined' ? courses : []), attemptCounter: (typeof attemptCounter !== 'undefined' ? attemptCounter : 0), examDurationMinutes: (typeof examDurationMinutes !== 'undefined' ? examDurationMinutes : 30) }) %>
         <% } %>

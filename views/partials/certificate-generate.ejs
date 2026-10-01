@@ -1,0 +1,94 @@
+<%
+  var certResult = (typeof result !== 'undefined') ? result : null;
+  var certChecksum = (typeof checksum !== 'undefined' && checksum) ? checksum : "";
+  var certAttempt = (typeof attempt !== 'undefined') ? attempt : null;
+  var certMessage = (typeof message !== 'undefined' && message) ? message : "";
+  var feeKobo = (certAttempt && certAttempt.course) ? certAttempt.course.certificatePriceKobo : 0;
+%>
+<section class="space-y-6 animate-fade-in">
+  <div class="page-head">
+    <span class="page-head-eyebrow">Certificate Generator</span>
+    <h2 class="page-head-title">Generate Your Certificate</h2>
+    <p class="page-head-text">Enter the result code from a passed assessment. If the code is valid, you can generate your official CyberCops Academy certificate.</p>
+  </div>
+
+  <form class="mx-auto max-w-xl space-y-4 premium-card" hx-post="/certificates/generate" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+    <div class="space-y-2">
+      <label for="cert-checksum" class="premium-label">Result code</label>
+      <input type="text" id="cert-checksum" name="checksum" value="<%= certChecksum %>" placeholder="e.g. CCA-SYS-TRK-xxxxxxxxxxxxxxxxxxxxxxxx" class="premium-input font-mono text-sm" autocomplete="off" />
+    </div>
+    <button class="premium-btn premium-btn-primary w-full" type="submit">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+      Check Result Code
+    </button>
+  </form>
+
+  <% if (certResult === "not_found") { %>
+    <div class="mx-auto max-w-xl premium-alert premium-alert-error animate-fade-in">
+      <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      <div>
+        <div class="text-sm font-bold">Result code not found</div>
+        <div class="mt-1 text-sm">No assessment result matches that code. Please check it and try again.</div>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (certMessage) { %>
+    <div class="mx-auto max-w-xl premium-alert premium-alert-error animate-fade-in">
+      <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span><%= certMessage %></span>
+    </div>
+  <% } %>
+
+  <% if (certResult === "found" && certAttempt) { %>
+    <div class="mx-auto max-w-xl premium-card animate-fade-in">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Result found</h3>
+          <p class="card-subtitle">Confirm the details below, then proceed to generate the certificate.</p>
+        </div>
+        <span class="badge badge-success">PASS</span>
+      </div>
+
+      <div class="grid gap-1">
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Participant</span>
+          <span class="text-sm font-semibold text-surface-900 text-right"><%= certAttempt.candidateName %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Institution</span>
+          <span class="text-sm text-surface-700 text-right"><%= certAttempt.institution %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Track</span>
+          <span class="text-sm text-surface-700 text-right"><%= certAttempt.course.code %>: <%= certAttempt.course.name %></span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5 border-b border-surface-100">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Score</span>
+          <span class="text-sm font-bold text-surface-900"><%= certAttempt.rawScore %> / <%= certAttempt.totalQuestions %> (<%= Number(certAttempt.percentage).toFixed(1) %>%)</span>
+        </div>
+        <div class="flex justify-between gap-4 py-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-surface-500">Certificate fee</span>
+          <% if (feeKobo > 0) { %>
+            <span class="price-pill price-pill-paid"><%= formatNaira(feeKobo) %></span>
+          <% } else { %>
+            <span class="price-pill price-pill-free">Free</span>
+          <% } %>
+        </div>
+      </div>
+
+      <form class="mt-5 space-y-4 border-t border-surface-200 pt-5" method="POST" action="/certificates/checkout">
+        <input type="hidden" name="checksum" value="<%= certAttempt.checksum %>" />
+        <div class="space-y-2">
+          <label for="cert-pay-email" class="premium-label">Email address</label>
+          <input type="email" id="cert-pay-email" name="email" placeholder="e.g. john.smith@example.com" class="premium-input" autocomplete="email" required />
+          <p class="text-xs text-surface-400">Used for your payment receipt.</p>
+        </div>
+        <button class="premium-btn premium-btn-primary w-full" type="submit">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          <%= feeKobo > 0 ? "Pay " + formatNaira(feeKobo) + " & Generate" : "Generate Certificate" %>
+        </button>
+      </form>
+    </div>
+  <% } %>
+</section>

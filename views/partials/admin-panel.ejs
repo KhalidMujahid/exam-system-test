@@ -94,40 +94,48 @@
           <div class="card-header">
             <div>
               <h3 class="card-title">Tracks &amp; Pricing</h3>
-              <p class="card-subtitle">Cyber security assessments are paid: tick <strong class="text-surface-700">Requires payment</strong> and set a fee in Naira (₦). Leave it unticked for free, standard assessments.</p>
+              <p class="card-subtitle">Cyber security assessments are paid: tick <strong class="text-surface-700">Requires payment</strong> and set a fee. Set a <strong class="text-surface-700">certificate fee</strong> per track for certificate generation.</p>
             </div>
             <span class="badge badge-neutral"><%= courses.length %> tracks</span>
           </div>
 
           <div class="space-y-3">
             <% courses.forEach(function(course) { %>
-              <form class="grid gap-3 rounded-xl border border-surface-200 bg-surface-50/60 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_140px_170px_auto] lg:items-center" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+              <form class="grid gap-3 rounded-xl border border-surface-200 bg-surface-50/60 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_130px_150px_150px_auto] lg:items-center" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
                 <input type="hidden" name="originalCode" value="<%= course.code %>" />
                 <input type="text" name="code" value="<%= course.code %>" class="premium-input font-mono text-xs" aria-label="Course code" />
                 <input type="text" name="name" value="<%= course.name %>" class="premium-input" aria-label="Course title" />
-                <label class="flex items-center gap-2 text-xs font-semibold text-surface-600 select-none">
+                <label class="flex items-center gap-2 text-xs font-semibold text-surface-600 select-none" title="Requires payment before the assessment">
                   <input type="checkbox" name="requiresPayment" value="on" <%= course.requiresPayment ? "checked" : "" %> class="premium-radio !mt-0" />
-                  Requires payment
+                  Paid
                 </label>
                 <div class="relative min-w-0">
                   <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-surface-400">₦</span>
-                  <input type="number" name="priceNaira" min="0" step="0.01" value="<%= (course.priceKobo / 100).toFixed(2) %>" class="premium-input pl-7" aria-label="Assessment fee in naira" />
+                  <input type="number" name="priceNaira" min="0" step="0.01" value="<%= (course.priceKobo / 100).toFixed(2) %>" class="premium-input pl-7" aria-label="Assessment fee in naira" title="Assessment fee" />
+                </div>
+                <div class="relative min-w-0">
+                  <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-surface-400">₦</span>
+                  <input type="number" name="certificatePriceNaira" min="0" step="0.01" value="<%= (course.certificatePriceKobo / 100).toFixed(2) %>" class="premium-input pl-7" aria-label="Certificate fee in naira" title="Certificate generation fee" />
                 </div>
                 <button class="premium-btn premium-btn-secondary" type="submit">Save</button>
               </form>
             <% }) %>
           </div>
 
-          <form class="mt-4 grid gap-3 rounded-xl border border-dashed border-surface-300 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_140px_170px_auto] lg:items-center" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
+          <form class="mt-4 grid gap-3 rounded-xl border border-dashed border-surface-300 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_130px_150px_150px_auto] lg:items-center" hx-post="/admin/courses" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
             <input type="text" name="code" placeholder="New course code" class="premium-input font-mono text-xs" />
             <input type="text" name="name" placeholder="New course title" class="premium-input" />
             <label class="flex items-center gap-2 text-xs font-semibold text-surface-600 select-none">
               <input type="checkbox" name="requiresPayment" value="on" class="premium-radio !mt-0" />
-              Requires payment
+              Paid
             </label>
             <div class="relative min-w-0">
               <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-surface-400">₦</span>
-              <input type="number" name="priceNaira" min="0" step="0.01" placeholder="0.00" class="premium-input pl-7" aria-label="New assessment fee" />
+              <input type="number" name="priceNaira" min="0" step="0.01" placeholder="Exam fee" class="premium-input pl-7" aria-label="New assessment fee" />
+            </div>
+            <div class="relative min-w-0">
+              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-surface-400">₦</span>
+              <input type="number" name="certificatePriceNaira" min="0" step="0.01" placeholder="Cert. fee" class="premium-input pl-7" aria-label="New certificate fee" />
             </div>
             <button class="premium-btn premium-btn-primary" type="submit">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -143,7 +151,7 @@
           <div class="card-header">
             <div>
               <h3 class="card-title">Course Materials Library</h3>
-              <p class="card-subtitle">Upload PDFs, documents, and resources for candidates to download per track.</p>
+              <p class="card-subtitle">Add Google Drive links for candidates to open per track. No file upload required.</p>
             </div>
             <form hx-get="/admin" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
               <label class="sr-only" for="matCourseId">Select course</label>
@@ -155,19 +163,19 @@
             </form>
           </div>
 
-          <form class="flex flex-col gap-4 sm:flex-row sm:items-end" hx-post="/admin/materials/upload" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" enctype="multipart/form-data">
+          <form class="flex flex-col gap-4 sm:flex-row sm:items-end" hx-post="/admin/materials" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader">
             <input type="hidden" name="courseId" value="<%= selectedCourse ? selectedCourse.id : "" %>" />
             <div class="flex-1 space-y-2 min-w-0">
               <label class="premium-label">Material title</label>
               <input type="text" name="title" placeholder="e.g. Chapter 1 — Introduction" class="premium-input" />
             </div>
-            <div class="flex-1 space-y-2 min-w-0">
-              <label class="premium-label">File (PDF, DOC, etc.)</label>
-              <input type="file" name="file" class="premium-input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 file:cursor-pointer" />
+            <div class="flex-[1.5] space-y-2 min-w-0">
+              <label class="premium-label">Google Drive link</label>
+              <input type="url" name="linkUrl" placeholder="https://drive.google.com/file/d/..." class="premium-input" />
             </div>
             <button class="premium-btn premium-btn-primary whitespace-nowrap" type="submit">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-              Upload
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              Add Link
             </button>
           </form>
 
@@ -180,10 +188,10 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-surface-900 truncate"><%= mat.title %></p>
-                    <p class="text-xs text-surface-400"><%= mat.filename %> · <%= (mat.filesize / 1024).toFixed(0) %> KB</p>
+                    <p class="text-xs text-surface-400 truncate"><%= mat.url %></p>
                   </div>
                   <div class="flex gap-2 flex-shrink-0">
-                    <a href="/materials/download/<%= mat.id %>" class="premium-btn premium-btn-ghost text-xs px-3 py-2" aria-label="Download material">
+                    <a href="/materials/open/<%= mat.id %>" target="_blank" rel="noopener" class="premium-btn premium-btn-ghost text-xs px-3 py-2" aria-label="Open material">
                       <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     </a>
                     <form hx-post="/admin/materials/delete/<%= mat.id %>" hx-target="#main" hx-swap="innerHTML" hx-indicator="#global-loader" class="inline">
@@ -279,7 +287,8 @@
                 <tr>
                   <th>Track</th>
                   <th>Title</th>
-                  <th class="text-right">Fee</th>
+                  <th class="text-right">Exam fee</th>
+                  <th class="text-right">Certificate fee</th>
                   <th class="text-right">Questions</th>
                 </tr>
               </thead>
@@ -291,6 +300,13 @@
                     <td class="text-right">
                       <% if (course.requiresPayment) { %>
                         <span class="price-pill price-pill-paid"><%= formatNaira(course.priceKobo) %></span>
+                      <% } else { %>
+                        <span class="badge badge-neutral">Free</span>
+                      <% } %>
+                    </td>
+                    <td class="text-right">
+                      <% if (course.certificatePriceKobo > 0) { %>
+                        <span class="price-pill price-pill-paid"><%= formatNaira(course.certificatePriceKobo) %></span>
                       <% } else { %>
                         <span class="badge badge-neutral">Free</span>
                       <% } %>

@@ -20,6 +20,7 @@ model Course {
   name      String
   requiresPayment Boolean @default(false)
   priceKobo Int        @default(0)
+  certificatePriceKobo Int @default(0)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   questions Question[]
@@ -54,6 +55,8 @@ model Attempt {
   percentage      Float            @default(0)
   passed          Boolean          @default(false)
   checksum        String?
+  certificateIssued   Boolean      @default(false)
+  certificateIssuedAt DateTime?
   startedAt       DateTime
   endedAt         DateTime?
   createdAt       DateTime         @default(now())
@@ -96,6 +99,7 @@ model Payment {
   course           Course    @relation(fields: [courseId], references: [id], onDelete: Restrict)
   amount           Int
   currency         String    @default("NGN")
+  purpose          String    @default("ASSESSMENT")
   status           String    @default("PENDING")
   accessCode       String?
   authorizationUrl String?
@@ -108,16 +112,16 @@ model Payment {
 }
 
 model CourseMaterial {
-  id           String   @id @default(cuid())
-  courseId      String
-  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title        String
-  filename     String
-  cloudinaryId   String
-  cloudinaryType String @default("raw")
+  id             String   @id @default(cuid())
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title          String
   url            String
-  filesize       Int
-  mimeType       String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  filename       String?
+  filesize       Int?
+  mimeType       String?
+  cloudinaryId   String?
+  cloudinaryType String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

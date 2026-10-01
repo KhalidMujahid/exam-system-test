@@ -5,8 +5,6 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
 const { PrismaClient } = require("@prisma/client");
 
 const app = express();
@@ -19,14 +17,6 @@ const PAYSTACK_BASE_URL = "https://api.paystack.co";
 const PAYSTACK_SECRET_KEY = (process.env.PAYSTACK_SECRET_KEY || "").trim();
 const PAYSTACK_CURRENCY = (process.env.PAYSTACK_CURRENCY || "NGN").trim();
 const APP_BASE_URL = (process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
@@ -245,7 +235,36 @@ async function resumePaymentAttempt(payment) {
   };
 }
 
+async function finalizeCertificatePayment(payment) {
+  const attempt = await prisma.attempt.findUnique({
+    where: { id: payment.attemptId },
+    include: { course: true }
+  });
+  if (!attempt) return { ok: false, reason: "attempt_missing" };
+
+  if (!attempt.certificateIssued) {
+    await prisma.attempt.update({
+      where: { id: attempt.id },
+      data: { certificateIssued: true, certificateIssuedAt: new Date() }
+    });
+  }
+
+  if (payment.status !== "SUCCESS") {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "SUCCESS", paidAt: new Date() }
+    });
+  }
+
+  const issued = await prisma.attempt.findUnique({ where: { id: attempt.id }, include: { course: true } });
+  return { ok: true, attempt: issued };
+}
+
 async function finalizePayment(payment) {
+  if (payment.purpose === "CERTIFICATE") {
+    return finalizeCertificatePayment(payment);
+  }
+
   if (payment.status === "SUCCESS" && payment.attemptId) {
     const resumed = await resumePaymentAttempt(payment);
     if (resumed) return { ok: true, ...resumed };
@@ -368,21 +387,27 @@ app.get("/certifications", async (req, res, next) => {
   }
 });
 
-const COMING_SOON = {
-  title: "Generate Certificate",
-  message: "Certificate generation is coming soon. Certificates will be issued automatically once you complete and pass an assessment."
-};
+function certificateGenerateData(extra = {}) {
+  return {
+    certificateResult: null,
+    certificateChecksum: "",
+    certificateAttempt: null,
+    certificateMessage: "",
+    ...extra
+  };
+}
 
 app.get("/certificates/generate", async (req, res, next) => {
   try {
     const isHtmx = req.headers["hx-request"] === "true";
     if (isHtmx) {
-      return res.render("partials/coming-soon", COMING_SOON);
+      return res.render("partials/certificate-generate", {
+        result: null, checksum: "", attempt: null, message: ""
+      });
     }
     await renderFullPage(res, {
-      comingSoonContent: true,
-      comingSoonTitle: COMING_SOON.title,
-      comingSoonMessage: COMING_SOON.message
+      certificateGenerateContent: true,
+      ...certificateGenerateData()
     });
   } catch (err) {
     next(err);
@@ -391,7 +416,230 @@ app.get("/certificates/generate", async (req, res, next) => {
 
 app.post("/certificates/generate", async (req, res, next) => {
   try {
-    res.render("partials/coming-soon", COMING_SOON);
+    const checksum = (req.body.checksum || "").trim();
+    const isHtmx = req.headers["hx-request"] === "true";
+
+    const respond = async (data) => {
+      if (isHtmx) {
+        return res.render("partials/certificate-generate", {
+          result: data.result, checksum: data.checksum, attempt: data.attempt, message: data.message
+        });
+      }
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: data.result,
+          certificateChecksum: data.checksum,
+          certificateAttempt: data.attempt,
+          certificateMessage: data.message
+        })
+      });
+    };
+
+    if (!checksum) {
+      return respond({ result: null, checksum: "", attempt: null, message: "" });
+    }
+
+    const attempt = await prisma.attempt.findFirst({ where: { checksum }, include: { course: true } });
+
+    if (!attempt) {
+      return respond({ result: "not_found", checksum, attempt: null, message: "" });
+    }
+
+    if (!attempt.passed) {
+      return respond({
+        result: "failed",
+        checksum,
+        attempt,
+        message: "This result did not meet the 80% passing threshold, so a certificate cannot be generated for it."
+      });
+    }
+
+    if (attempt.certificateIssued) {
+      if (isHtmx) return res.render("partials/certificate-view", { attempt });
+      return renderFullPage(res, { certificateViewContent: true, certificateAttempt: attempt });
+    }
+
+    return respond({ result: "found", checksum, attempt, message: "" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/certificates/checkout", async (req, res, next) => {
+  try {
+    const checksum = (req.body.checksum || "").trim();
+    const email = (req.body.email || "").trim().toLowerCase();
+
+    const attempt = checksum
+      ? await prisma.attempt.findFirst({ where: { checksum }, include: { course: true } })
+      : null;
+
+    if (!attempt) {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({ certificateResult: "not_found", certificateChecksum: checksum })
+      });
+    }
+
+    if (!attempt.passed) {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: "failed", certificateChecksum: checksum, certificateAttempt: attempt,
+          certificateMessage: "Only passed assessments can be certified."
+        })
+      });
+    }
+
+    if (attempt.certificateIssued) {
+      return renderFullPage(res, { certificateViewContent: true, certificateAttempt: attempt });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: "found", certificateChecksum: checksum, certificateAttempt: attempt,
+          certificateMessage: "A valid email address is required to process payment."
+        })
+      });
+    }
+
+    const feeKobo = attempt.course.certificatePriceKobo;
+
+    if (feeKobo <= 0) {
+      await prisma.attempt.update({
+        where: { id: attempt.id },
+        data: { certificateIssued: true, certificateIssuedAt: new Date() }
+      });
+      const issued = await prisma.attempt.findUnique({ where: { id: attempt.id }, include: { course: true } });
+      return renderFullPage(res, { certificateViewContent: true, certificateAttempt: issued });
+    }
+
+    if (!PAYSTACK_SECRET_KEY) {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: "found", certificateChecksum: checksum, certificateAttempt: attempt,
+          certificateMessage: "Payment is not configured yet. Please contact the administrator."
+        })
+      });
+    }
+
+    const reference = generatePaymentReference();
+    const payment = await prisma.payment.create({
+      data: {
+        reference,
+        purpose: "CERTIFICATE",
+        candidateName: attempt.candidateName,
+        institution: attempt.institution,
+        email,
+        courseId: attempt.courseId,
+        amount: feeKobo,
+        currency: PAYSTACK_CURRENCY,
+        status: "PENDING",
+        attemptId: attempt.id
+      }
+    });
+
+    const init = await paystackRequest("/transaction/initialize", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        amount: feeKobo,
+        currency: PAYSTACK_CURRENCY,
+        reference,
+        callback_url: `${baseUrlFor(req)}/payment/certificate/callback`,
+        metadata: {
+          purpose: "CERTIFICATE",
+          attemptId: attempt.id,
+          checksum,
+          paymentId: payment.id
+        }
+      })
+    });
+
+    const initPayload = init.data && init.data.data;
+    if (!init.ok || !init.data || init.data.status !== true || !initPayload || !initPayload.authorization_url) {
+      await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: "found", certificateChecksum: checksum, certificateAttempt: attempt,
+          certificateMessage: (init.data && init.data.message) || "Unable to initialize payment. Please try again."
+        })
+      });
+    }
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { accessCode: initPayload.access_code || null, authorizationUrl: initPayload.authorization_url }
+    });
+
+    res.redirect(initPayload.authorization_url);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/payment/certificate/callback", async (req, res, next) => {
+  try {
+    const reference = (req.query.reference || req.query.trxref || "").trim();
+    const payment = reference ? await loadPaymentWithCourse(reference) : null;
+
+    if (!payment || payment.purpose !== "CERTIFICATE") {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({ certificateMessage: "We could not find that certificate payment." })
+      });
+    }
+
+    if (payment.status === "SUCCESS" && payment.attemptId) {
+      const attempt = await prisma.attempt.findUnique({ where: { id: payment.attemptId }, include: { course: true } });
+      if (attempt) return renderFullPage(res, { certificateViewContent: true, certificateAttempt: attempt });
+    }
+
+    const verification = await paystackRequest(`/transaction/verify/${encodeURIComponent(reference)}`, { method: "GET" });
+    const txn = verification.data && verification.data.data;
+    const verified = Boolean(
+      verification.ok &&
+      verification.data &&
+      verification.data.status === true &&
+      txn &&
+      txn.status === "success" &&
+      Number(txn.amount) === payment.amount &&
+      txn.currency === payment.currency
+    );
+
+    if (!verified) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: txn && txn.status === "abandoned" ? "ABANDONED" : "FAILED" }
+      });
+      const attempt = payment.attemptId
+        ? await prisma.attempt.findUnique({ where: { id: payment.attemptId }, include: { course: true } })
+        : null;
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({
+          certificateResult: attempt ? "found" : "not_found",
+          certificateChecksum: attempt ? attempt.checksum || "" : "",
+          certificateAttempt: attempt,
+          certificateMessage: (verification.data && verification.data.message) || "Your payment could not be verified."
+        })
+      });
+    }
+
+    const result = await finalizePayment(payment);
+    if (!result.ok) {
+      return renderFullPage(res, {
+        certificateGenerateContent: true,
+        ...certificateGenerateData({ certificateMessage: "This payment could not be linked to a certificate." })
+      });
+    }
+
+    return renderFullPage(res, { certificateViewContent: true, certificateAttempt: result.attempt });
   } catch (err) {
     next(err);
   }
@@ -676,6 +924,12 @@ app.post("/admin/courses", requireAdmin, async (req, res, next) => {
       priceKobo = 0;
     }
 
+    const rawCertPrice = (req.body.certificatePriceNaira || "").toString().trim();
+    const certificatePriceKobo = rawCertPrice === "" ? 0 : toKobo(rawCertPrice);
+    if (rawCertPrice !== "" && (Number.isNaN(Number.parseFloat(rawCertPrice)) || Number.parseFloat(rawCertPrice) < 0)) {
+      return res.render("partials/admin-alert", { message: "Certificate price must be a valid non-negative amount." });
+    }
+
     if (originalCode) {
       const course = await prisma.course.findUnique({ where: { code: originalCode } });
       if (!course) {
@@ -685,7 +939,7 @@ app.post("/admin/courses", requireAdmin, async (req, res, next) => {
       try {
         await prisma.course.update({
           where: { id: course.id },
-          data: { code, name, requiresPayment, priceKobo }
+          data: { code, name, requiresPayment, priceKobo, certificatePriceKobo }
         });
       } catch (error) {
         if (error.code === "P2002") {
@@ -695,7 +949,7 @@ app.post("/admin/courses", requireAdmin, async (req, res, next) => {
       }
     } else {
       try {
-        await prisma.course.create({ data: { code, name, requiresPayment, priceKobo } });
+        await prisma.course.create({ data: { code, name, requiresPayment, priceKobo, certificatePriceKobo } });
       } catch (error) {
         if (error.code === "P2002") {
           return res.render("partials/admin-alert", { message: "That course code already exists." });
@@ -1066,47 +1320,31 @@ app.get("/materials/:courseId", async (req, res, next) => {
   }
 });
 
-app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (req, res, next) => {
+app.post("/admin/materials", requireAdmin, async (req, res, next) => {
   try {
     const courseId = (req.body.courseId || "").trim();
-    if (!courseId || !req.file) {
-      return res.render("partials/admin-alert", { message: "Course and file are required." });
+    const title = (req.body.title || "").trim();
+    const linkUrl = (req.body.linkUrl || "").trim();
+
+    if (!courseId || !title || !linkUrl) {
+      return res.render("partials/admin-alert", { message: "Course, title, and a Google Drive link are required." });
     }
+    if (!/^https?:\/\//i.test(linkUrl)) {
+      return res.render("partials/admin-alert", { message: "The link must be a valid URL starting with http:// or https://." });
+    }
+
     const course = await prisma.course.findUnique({ where: { id: courseId } });
     if (!course) {
       return res.render("partials/admin-alert", { message: "Course not found." });
     }
 
-    const imageMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
-    const isImage = imageMimeTypes.includes(req.file.mimetype);
-    const resourceType = isImage ? "image" : "raw";
-
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: resourceType,
-          folder: "cca_materials",
-          public_id: `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`,
-          access_mode: "public"
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      uploadStream.end(req.file.buffer);
-    });
-
     await prisma.courseMaterial.create({
       data: {
         courseId,
-        title: req.body.title || req.file.originalname,
-        filename: req.file.originalname,
-        cloudinaryId: result.public_id,
-        cloudinaryType: resourceType,
-        url: result.secure_url,
-        filesize: req.file.size,
-        mimeType: req.file.mimetype
+        title,
+        url: linkUrl,
+        filename: title,
+        mimeType: "link"
       }
     });
 
@@ -1126,19 +1364,11 @@ app.post("/admin/materials/upload", requireAdmin, upload.single("file"), async (
   }
 });
 
-app.get("/materials/download/:id", async (req, res, next) => {
+app.get("/materials/open/:id", async (req, res, next) => {
   try {
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
     if (!material) return res.status(404).send("Material not found.");
-    const type = material.cloudinaryType || "raw";
-    const downloadUrl = cloudinary.url(material.cloudinaryId, {
-      resource_type: type,
-      secure: true,
-      type: "upload",
-      flags: "attachment",
-      attachment_name: material.filename
-    });
-    res.redirect(downloadUrl);
+    res.redirect(material.url);
   } catch (err) {
     next(err);
   }
@@ -1149,10 +1379,6 @@ app.post("/admin/materials/delete/:id", requireAdmin, async (req, res, next) => 
     const material = await prisma.courseMaterial.findUnique({ where: { id: req.params.id } });
     if (!material) return res.render("partials/admin-alert", { message: "Material not found." });
     const courseId = material.courseId;
-
-    try {
-      await cloudinary.uploader.destroy(material.cloudinaryId, { resource_type: material.cloudinaryType || "raw" });
-    } catch (_) {}
 
     await prisma.courseMaterial.delete({ where: { id: material.id } });
     const updatedCourse = await prisma.course.findUnique({
